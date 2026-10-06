@@ -1,6 +1,6 @@
 // Core stock data structure
 export interface Stock {
-  ticker: string      // e.g. 'RELIANCE.NS' or 'AAPL'
+  ticker: string      // e.g. 'RELIANCE.NS', 'TCS.NS', 'AAPL'
   name: string        // Display name
   weight: number      // User-assigned weight (default 1)
   currentPrice: number
@@ -8,11 +8,20 @@ export interface Stock {
   changePercent: number
 }
 
-// Persisted watchlist item (only what we save to localStorage)
+// Persisted watchlist item (saved to localStorage)
 export interface WatchlistEntry {
   ticker: string
   name: string
   weight: number
+}
+
+// Search result item for instant search dropdown
+export interface SearchResult {
+  ticker: string
+  name: string
+  exchange?: string
+  currentPrice?: number
+  changePercent?: number
 }
 
 // Auto-refresh interval options
