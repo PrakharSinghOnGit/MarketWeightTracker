@@ -1,6 +1,7 @@
 import type { WatchlistEntry } from './types'
 
 const STORAGE_KEY = 'breadth_tracker_watchlist'
+const API_KEY_STORAGE = 'breadth_tracker_twelvedata_key'
 
 /** Load watchlist from localStorage. Returns empty array on failure. */
 export function loadWatchlist(): WatchlistEntry[] {
@@ -21,6 +22,24 @@ export function saveWatchlist(entries: WatchlistEntry[]): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
   } catch (e) {
     console.error('[Storage] Failed to save watchlist:', e)
+  }
+}
+
+/** Load Twelve Data API key from localStorage. */
+export function loadApiKey(): string {
+  try {
+    return localStorage.getItem(API_KEY_STORAGE) || ''
+  } catch {
+    return ''
+  }
+}
+
+/** Save Twelve Data API key to localStorage. */
+export function saveApiKey(key: string): void {
+  try {
+    localStorage.setItem(API_KEY_STORAGE, key.trim())
+  } catch (e) {
+    console.error('[Storage] Failed to save API key:', e)
   }
 }
 

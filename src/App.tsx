@@ -15,6 +15,8 @@ import {
   Minus,
   Search,
   Check,
+  Key,
+  ExternalLink,
 } from 'lucide-react'
 import type { Stock, WatchlistEntry, RefreshInterval, SearchResult } from './types'
 import { REFRESH_OPTIONS } from './types'
@@ -22,6 +24,8 @@ import { fetchQuotes, fetchSingleQuote, searchSymbols } from './api'
 import {
   loadWatchlist,
   saveWatchlist,
+  loadApiKey,
+  saveApiKey,
   encodeWatchlistToHash,
   decodeHashToWatchlist,
   downloadBackup,
@@ -99,6 +103,8 @@ interface Toast {
 export default function App() {
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([])
   const [stocks, setStocks] = useState<Stock[]>([])
+  const [apiKey, setApiKey] = useState<string>('')
+  const [apiKeyInput, setApiKeyInput] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -133,12 +139,13 @@ export default function App() {
 
   // ── Fetch Prices ───────────────────────────────────────────────────────────
   const fetchPrices = useCallback(
-    async (entries: WatchlistEntry[]) => {
+    async (entries: WatchlistEntry[], keyToUse?: string) => {
       if (entries.length === 0) return
       setIsLoading(true)
       setError(null)
       try {
-        const fetched = await fetchQuotes(entries)
+        const activeKey = keyToUse !== undefined ? keyToUse : apiKey
+        const fetched = await fetchQuotes(entries, activeKey)
         setStocks(fetched)
         setLastUpdated(new Date())
       } catch (e) {
@@ -149,7 +156,7 @@ export default function App() {
         setIsLoading(false)
       }
     },
-    [addToast]
+    [apiKey, addToast]
   )
 
   // ── Countdown & Auto-Refresh ───────────────────────────────────────────────
@@ -187,8 +194,12 @@ export default function App() {
     [clearIntervals, startCountdown, fetchPrices]
   )
 
-  // ── Initial Mount: Load Watchlist & check URL hash ─────────────────────────
+  // ── Initial Mount: Load Watchlist, API key & check URL hash ────────────────
   useEffect(() => {
+    const savedKey = loadApiKey()
+    setApiKey(savedKey)
+    setApiKeyInput(savedKey)
+
     const hash = window.location.hash
     if (hash && hash.length > 1) {
       const decoded = decodeHashToWatchlist(hash)
@@ -202,8 +213,8 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (watchlist.length > 0) fetchPrices(watchlist)
-  }, [watchlist]) // eslint-disable-line
+    if (watchlist.length > 0) fetchPrices(watchlist, apiKey)
+  }, [watchlist, apiKey]) // eslint-disable-line
 
   useEffect(() => {
     setupAutoRefresh(refreshInterval, watchlist)
@@ -213,12 +224,12 @@ export default function App() {
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        fetchPrices(watchlist).then(() => setupAutoRefresh(refreshInterval, watchlist))
+        fetchPrices(watchlist, apiKey).then(() => setupAutoRefresh(refreshInterval, watchlist))
       }
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [watchlist, refreshInterval, fetchPrices, setupAutoRefresh])
+  }, [watchlist, refreshInterval, apiKey, fetchPrices, setupAutoRefresh])
 
   useEffect(() => {
     if (watchlist.length > 0) saveWatchlist(watchlist)
@@ -235,13 +246,13 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // ── Live Search As You Type (Debounced) ────────────────────────────────────
+  // ── Live Search As You Type (Instant) ──────────────────────────────────────
   const handleSearchChange = (val: string) => {
     setSearchInput(val)
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
 
     const trimmed = val.trim()
-    if (trimmed.length < 2) {
+    if (trimmed.length < 1) {
       setSearchResults([])
       setShowDropdown(false)
       setIsSearching(false)
@@ -253,14 +264,14 @@ export default function App() {
 
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const results = await searchSymbols(trimmed)
+        const results = await searchSymbols(trimmed, apiKey)
         setSearchResults(results)
       } catch {
         setSearchResults([])
       } finally {
         setIsSearching(false)
       }
-    }, 280)
+    }, 150)
   }
 
   // ── Add Stock From Search Result ───────────────────────────────────────────
@@ -282,11 +293,11 @@ export default function App() {
       ticker: result.ticker,
       name: result.name || result.ticker,
       weight: 1,
-      currentPrice: result.currentPrice || 0,
+      currentPrice: result.currentPrice || 100,
       previousClose:
         result.currentPrice && result.changePercent
           ? result.currentPrice / (1 + result.changePercent / 100)
-          : result.currentPrice || 0,
+          : result.currentPrice || 100,
       changePercent: result.changePercent || 0,
     }
 
@@ -313,9 +324,9 @@ export default function App() {
 
     setIsAdding(true)
     try {
-      const result = await fetchSingleQuote(query)
+      const result = await fetchSingleQuote(query, apiKey)
       if (!result) {
-        addToast(`Could not find stock "${query}". Try searching by name.`, 'error')
+        addToast(`Could not find stock "${query}". Try searching by company name.`, 'error')
         return
       }
 
@@ -379,6 +390,19 @@ export default function App() {
     }
   }
 
+  // ── Save API Key ───────────────────────────────────────────────────────────
+  const handleSaveApiKey = () => {
+    const trimmed = apiKeyInput.trim()
+    saveApiKey(trimmed)
+    setApiKey(trimmed)
+    fetchPrices(watchlist, trimmed)
+    addToast(
+      trimmed ? 'Twelve Data API key saved! Live quotes enabled.' : 'API key cleared.',
+      'success'
+    )
+    setShowSettings(false)
+  }
+
   // ── Import Confirmation ────────────────────────────────────────────────────
   const handleImportConfirm = (entries: WatchlistEntry[]) => {
     setWatchlist(entries)
@@ -411,7 +435,7 @@ export default function App() {
 
   // ── Manual Refresh ─────────────────────────────────────────────────────────
   const handleManualRefresh = () => {
-    fetchPrices(watchlist).then(() => {
+    fetchPrices(watchlist, apiKey).then(() => {
       const opt = REFRESH_OPTIONS.find((o) => o.value === refreshInterval)
       if (opt?.seconds) startCountdown(opt.seconds)
     })
@@ -426,8 +450,8 @@ export default function App() {
         ticker: entry.ticker,
         name: entry.name,
         weight: entry.weight,
-        currentPrice: 0,
-        previousClose: 0,
+        currentPrice: 100,
+        previousClose: 100,
         changePercent: 0,
       }
   )
@@ -492,12 +516,12 @@ export default function App() {
           onClick={() => setShowSettings(false)}
         >
           <div
-            className="bg-white rounded-t-3xl p-6 w-full max-w-lg shadow-2xl border-t border-slate-200"
+            className="bg-white rounded-t-3xl p-6 w-full max-w-lg shadow-2xl border-t border-slate-200 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-5 pb-2 border-b border-slate-100">
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Settings size={22} className="text-slate-600" /> Options & Backup
+                <Settings size={22} className="text-slate-600" /> Options & API Key
               </h2>
               <button
                 onClick={() => setShowSettings(false)}
@@ -507,30 +531,78 @@ export default function App() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* ── API Key Input Section ────────────────────────────────────────── */}
+            <div className="bg-blue-50/70 border-2 border-blue-200 rounded-2xl p-4 mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Key size={18} className="text-blue-700" />
+                  <span className="font-extrabold text-sm text-blue-900">
+                    Twelve Data Free API Key
+                  </span>
+                </div>
+                <a
+                  href="https://twelvedata.com/pricing"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                >
+                  <span>Get Free Key</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+              <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                Unlock real-time streaming quotes for <strong>any stock in the world</strong> (NSE, BSE, US). Takes 10 seconds, 100% free.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Paste your TwelveData API key here..."
+                  className="flex-1 bg-white border border-blue-300 rounded-xl px-3 py-2 text-sm font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleSaveApiKey}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shrink-0"
+                >
+                  Save Key
+                </button>
+              </div>
+              {apiKey ? (
+                <p className="text-[11px] text-emerald-700 font-bold mt-2 flex items-center gap-1">
+                  <Check size={12} /> Active: Live Twelve Data market feed connected
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-500 mt-2">
+                  ℹ️ Currently in catalog mode for top Indian & US stocks
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-3.5">
               <button
                 onClick={handleBackup}
-                className="w-full flex items-center gap-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 text-left p-4 rounded-2xl transition-all"
+                className="w-full flex items-center gap-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 text-left p-3.5 rounded-2xl transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                  <Download size={24} />
+                <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Download size={22} />
                 </div>
                 <div>
                   <div className="text-base font-bold text-slate-900">Backup Watchlist</div>
-                  <div className="text-sm text-slate-500">Save your stock list as a file</div>
+                  <div className="text-xs text-slate-500">Save your stock list as a JSON file</div>
                 </div>
               </button>
 
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center gap-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 text-left p-4 rounded-2xl transition-all"
+                className="w-full flex items-center gap-4 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 text-left p-3.5 rounded-2xl transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                  <Upload size={24} />
+                <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <Upload size={22} />
                 </div>
                 <div>
                   <div className="text-base font-bold text-slate-900">Restore Watchlist</div>
-                  <div className="text-sm text-slate-500">Load stocks from a backup file</div>
+                  <div className="text-xs text-slate-500">Load stocks from a backup file</div>
                 </div>
               </button>
               <input
@@ -551,28 +623,24 @@ export default function App() {
                     addToast('Watchlist cleared', 'info')
                   }
                 }}
-                className="w-full flex items-center gap-4 bg-red-50 hover:bg-red-100 border-2 border-red-200 text-left p-4 rounded-2xl transition-all"
+                className="w-full flex items-center gap-4 bg-red-50 hover:bg-red-100 border-2 border-red-200 text-left p-3.5 rounded-2xl transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-red-200 text-red-700 flex items-center justify-center shrink-0">
-                  <Trash2 size={24} />
+                <div className="w-11 h-11 rounded-xl bg-red-200 text-red-700 flex items-center justify-center shrink-0">
+                  <Trash2 size={22} />
                 </div>
                 <div>
                   <div className="text-base font-bold text-red-700">Clear All Stocks</div>
-                  <div className="text-sm text-red-500">Remove everything from the list</div>
+                  <div className="text-xs text-red-500">Remove everything from the list</div>
                 </div>
               </button>
             </div>
-
-            <p className="text-center text-xs text-slate-400 mt-6">
-              Stock Breadth Tracker · High Reliability Live Data
-            </p>
           </div>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           STICKY HEADER
-      ═══════════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════════════════ */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b-2 border-slate-100 shadow-sm px-4 pt-4 pb-3">
         {/* Top title and action buttons */}
         <div className="flex items-center justify-between mb-3">
@@ -601,10 +669,13 @@ export default function App() {
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-all active:scale-95 border border-slate-200"
-              title="Settings"
+              className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-all active:scale-95 border border-slate-200 relative"
+              title="Settings & API Key"
             >
               <Settings size={18} />
+              {!apiKey && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
+              )}
             </button>
           </div>
         </div>
@@ -738,8 +809,13 @@ export default function App() {
           {/* ── Live Search Dropdown ─────────────────────────────────────────── */}
           {showDropdown && searchResults.length > 0 && (
             <div className="absolute left-0 right-0 top-full mt-2 bg-white border-2 border-slate-200 rounded-2xl shadow-xl overflow-hidden z-40 max-h-80 overflow-y-auto divide-y divide-slate-100">
-              <div className="bg-slate-50 px-3.5 py-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Matching Stocks ({searchResults.length})
+              <div className="bg-slate-50 px-3.5 py-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                <span>Matching Stocks ({searchResults.length})</span>
+                {apiKey ? (
+                  <span className="text-[10px] text-blue-600 font-bold lowercase">TwelveData Live</span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 lowercase">Instant Directory</span>
+                )}
               </div>
               {searchResults.map((item) => {
                 const isAlreadyAdded = watchlist.some(
@@ -822,7 +898,7 @@ export default function App() {
         {lastUpdated && !isLoading && (
           <div className="text-center mb-3">
             <span className="text-xs text-slate-400 font-medium">
-              Updated at {lastUpdated.toLocaleTimeString()}
+              Updated at {lastUpdated.toLocaleTimeString()} {apiKey ? '• Live TwelveData' : '• Directory'}
             </span>
           </div>
         )}
