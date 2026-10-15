@@ -4,619 +4,647 @@ import { loadWatchlist, saveWatchlist, resetWatchlist, clearWatchlist } from './
 import { calculateBreadth, formatPrice, formatTimeAgo } from './utils';
 import { getStockSummaries, searchStock } from './api';
 
-// ================= State =================
+// ===== Application State =====
 let watchlist: WatchlistStock[] = loadWatchlist();
+let expandedId: string | null = null;
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let deferredPrompt: any = null;
 
-// ================= DOM Elements =================
-const greenWeightEl = document.getElementById('green-weight-val')!;
-const redWeightEl = document.getElementById('red-weight-val')!;
-const barGreenEl = document.getElementById('bar-green')!;
-const barRedEl = document.getElementById('bar-red')!;
-const barGreenText = document.getElementById('bar-green-text')!;
-const barRedText = document.getElementById('bar-red-text')!;
-const stockListContainer = document.getElementById('stock-list-container')!;
-const emptyStateEl = document.getElementById('empty-state')!;
-const btnRefresh = document.getElementById('btn-refresh')!;
-const refreshText = document.getElementById('refresh-text')!;
-const btnResetSample = document.getElementById('btn-reset-sample')!;
-const btnClearAll = document.getElementById('btn-clear-all')!;
-const btnInstallPwa = document.getElementById('btn-install-pwa')!;
-const lastSyncStatus = document.getElementById('last-sync-status')!;
-
-// Modal Elements
-const btnOpenSearch = document.getElementById('btn-open-search')!;
+// ===== DOM References =====
+const appEl = document.getElementById('app')!;
 const searchModal = document.getElementById('search-modal')!;
-const btnCloseModal = document.getElementById('btn-close-modal')!;
 const modalSearchInput = document.getElementById('modal-search-input') as HTMLInputElement;
-const btnClearSearch = document.getElementById('btn-clear-search')!;
+const btnCloseModal = document.getElementById('btn-close-modal')!;
 const modalSearchResults = document.getElementById('modal-search-results')!;
 
-// ================= Rendering Functions =================
+// ===== Helper Functions =====
+function esc(s: string): string {
+  if (!s) return '';
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
-/**
- * Updates the Top Breadth Bar with weighted green vs red ratio.
- */
-function renderBreadthBar(): void {
+function tickerInitials(sym: string): string {
+  const base = sym.replace(/\.(NS|BO)$/i, '');
+  return base.slice(0, 2).toUpperCase();
+}
+
+function computeAbsChange(price: number, pct: number): string {
+  if (!price || !pct) return '0.00';
+  const prevClose = price / (1 + pct / 100);
+  const absChange = price - prevClose;
+  const sign = absChange >= 0 ? '+' : '';
+  return `${sign}${absChange.toFixed(2)}`;
+}
+
+function saveAndSync(): void {
+  saveWatchlist(watchlist);
+}
+
+// ===== Breadth Bar Calculator =====
+function getBreadthDetails() {
   const stats = calculateBreadth(watchlist);
-
-  greenWeightEl.textContent = stats.weightedGreen.toString();
-  redWeightEl.textContent = stats.weightedRed.toString();
-
   const total = stats.weightedGreen + stats.weightedRed;
 
-  if (total === 0) {
-    if (watchlist.length > 0) {
-      barGreenEl.style.width = '50%';
-      barRedEl.style.width = '50%';
-      barGreenText.textContent = '0';
-      barRedText.textContent = '0';
+  let greenBar = 50;
+  let redBar = 50;
+  let sentimentText = 'Neutral';
+  let sentimentClass = 'neutral';
+
+  if (total > 0) {
+    greenBar = stats.greenPercentage;
+    redBar = stats.redPercentage;
+    if (stats.weightedGreen > stats.weightedRed) {
+      sentimentText = `Bullish (${greenBar}%)`;
+      sentimentClass = 'bullish';
+    } else if (stats.weightedRed > stats.weightedGreen) {
+      sentimentText = `Bearish (${redBar}%)`;
+      sentimentClass = 'bearish';
     } else {
-      barGreenEl.style.width = '50%';
-      barRedEl.style.width = '50%';
-      barGreenText.textContent = '-';
-      barRedText.textContent = '-';
+      sentimentText = 'Balanced';
+      sentimentClass = 'neutral';
     }
-  } else if (stats.weightedGreen === 0) {
-    barGreenEl.style.width = '0%';
-    barRedEl.style.width = '100%';
-    barGreenText.textContent = '';
-    barRedText.textContent = `${stats.redPercentage}%`;
-  } else if (stats.weightedRed === 0) {
-    barGreenEl.style.width = '100%';
-    barRedEl.style.width = '0%';
-    barGreenText.textContent = `${stats.greenPercentage}%`;
-    barRedText.textContent = '';
-  } else {
-    barGreenEl.style.width = `${stats.greenPercentage}%`;
-    barRedEl.style.width = `${stats.redPercentage}%`;
-    barGreenText.textContent = `${stats.greenPercentage}%`;
-    barRedText.textContent = `${stats.redPercentage}%`;
+  } else if (watchlist.length === 0) {
+    greenBar = 0;
+    redBar = 0;
+    sentimentText = 'Empty';
+    sentimentClass = 'neutral';
+  }
+
+  return { stats, total, greenBar, redBar, sentimentText, sentimentClass };
+}
+
+// ===== Quick Header Breadth Synchronizer (without losing form focus) =====
+function syncBreadthUI(): void {
+  const { stats, total, greenBar, redBar, sentimentText, sentimentClass } = getBreadthDetails();
+
+  const greenValEl = document.getElementById('green-ratio-val');
+  const redValEl = document.getElementById('red-ratio-val');
+  const barGreenEl = document.getElementById('bar-green-seg');
+  const barRedEl = document.getElementById('bar-red-seg');
+  const pillEl = document.getElementById('breadth-sentiment-pill');
+  const pctSumEl = document.getElementById('breadth-pct-sum');
+
+  if (greenValEl) greenValEl.textContent = stats.weightedGreen.toString();
+  if (redValEl) redValEl.textContent = stats.weightedRed.toString();
+  if (barGreenEl) barGreenEl.style.width = `${total > 0 ? greenBar : 50}%`;
+  if (barRedEl) barRedEl.style.width = `${total > 0 ? redBar : 50}%`;
+  if (pillEl) {
+    pillEl.textContent = sentimentText;
+    pillEl.className = `breadth-sentiment-pill ${sentimentClass}`;
+  }
+  if (pctSumEl) {
+    pctSumEl.innerHTML = `<span class="pct-green-txt">${stats.greenPercentage}%</span> vs <span class="pct-red-txt">${stats.redPercentage}%</span>`;
   }
 }
 
-/**
- * Renders the watchlist items in an un-squeezed, spacious 2-row card layout.
- */
-function renderWatchlist(): void {
-  renderBreadthBar();
+// ===== Main App Renderer =====
+function render(): void {
+  const { stats, total, greenBar, redBar, sentimentText, sentimentClass } = getBreadthDetails();
 
-  if (watchlist.length === 0) {
-    stockListContainer.innerHTML = '';
-    emptyStateEl.style.display = 'block';
-    return;
-  }
+  const stocksHtml =
+    watchlist.length === 0
+      ? `<div class="empty-state">
+           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M3 3v18h18" />
+             <path d="m19 9-5 5-4-4-3 3" />
+           </svg>
+           <div class="empty-state-title">Your watchlist is empty</div>
+           <div class="empty-state-subtitle">Search ticker or name above to start tracking.</div>
+         </div>`
+      : watchlist
+          .map((s) => {
+            const up = s.rawPercent > 0;
+            const down = s.rawPercent < 0;
+            const cls = up ? 'up' : down ? 'down' : 'neutral';
+            const avatarBg = up ? 'up-bg' : down ? 'down-bg' : 'neutral-bg';
+            const isExpanded = expandedId === s.id;
+            const price = formatPrice(s.currentPrice, s.currency);
+            const absChg = computeAbsChange(s.currentPrice, s.rawPercent);
+            const timeInfo = formatTimeAgo(s.lastUpdated);
 
-  emptyStateEl.style.display = 'none';
-
-  stockListContainer.innerHTML = watchlist
-    .map((stock) => {
-      const isUp = stock.rawPercent > 0;
-      const isDown = stock.rawPercent < 0;
-      const changeClass = isUp ? 'up' : isDown ? 'down' : 'neutral';
-      const indicatorClass = isUp ? 'is-up' : isDown ? 'is-down' : 'is-neutral';
-      const formattedPrice = formatPrice(stock.currentPrice, stock.currency);
-      const timeInfo = formatTimeAgo(stock.lastUpdated);
-
-      return `
-      <div class="stock-card" data-id="${stock.id}">
-        <!-- Straight vertical indicator strip that stretches 100% of the card height -->
-        <div class="card-indicator ${indicatorClass}"></div>
-
-        <div class="card-body">
-          <!-- Row 1: Symbol & Exchange on the Left | Price & Change Pill on the Right -->
-          <div class="card-row-top">
-            <div class="symbol-group">
-              <span class="stock-symbol">${escapeHtml(stock.symbol)}</span>
-              ${stock.exchange ? `<span class="stock-badge">${escapeHtml(stock.exchange)}</span>` : ''}
+            return `
+        <div class="stock-card ${isExpanded ? 'expanded' : ''}" data-stock-card="${s.id}">
+          <div class="stock-row" data-toggle-id="${s.id}">
+            <div class="stock-avatar ${avatarBg}">
+              ${tickerInitials(s.symbol)}
             </div>
-            <div class="price-change-group">
-              <span class="stock-price">${formattedPrice}</span>
-              <span class="stock-change ${changeClass}">${escapeHtml(stock.changePercent)}</span>
+
+            <div class="stock-details">
+              <div class="stock-title-line">
+                <span class="stock-ticker">${esc(s.symbol)}</span>
+                ${s.exchange ? `<span class="stock-exchange">${esc(s.exchange)}</span>` : ''}
+                <span class="stock-weight-badge" data-badge-for="${s.id}">${s.weight}× wt</span>
+              </div>
+              <div class="stock-name" title="${esc(s.fullName)}">${esc(s.fullName)}</div>
+            </div>
+
+            <div class="stock-quotes">
+              <div class="stock-price">${price}</div>
+              <div class="stock-change-row">
+                <span class="stock-pct ${cls}">${esc(s.changePercent)}</span>
+                <span class="stock-abs">${absChg}</span>
+              </div>
             </div>
           </div>
 
-          <!-- Row 2: Company Name + Time ago on the Left | Weight Stepper & Delete on the Right -->
-          <div class="card-row-bottom">
-            <div class="meta-group">
-              <span class="stock-name" title="${escapeHtml(stock.fullName)}">${escapeHtml(stock.fullName || stock.symbol)}</span>
-              <span class="meta-divider">•</span>
-              <span class="time-counter-badge ${timeInfo.freshnessClass}" data-time-id="${stock.id}">
-                <span class="time-dot"></span>
-                <span class="time-text">${timeInfo.text}</span>
-              </span>
-            </div>
-            <div class="actions-group">
-              <div class="weight-control">
-                <span class="weight-label">WT</span>
-                <div class="weight-stepper">
-                  <button class="step-btn btn-dec" data-id="${stock.id}" title="Decrease weight">−</button>
-                  <input
-                    type="number"
-                    class="weight-input"
-                    data-id="${stock.id}"
-                    value="${stock.weight}"
-                    min="0"
-                    step="1"
-                    aria-label="Weight for ${escapeHtml(stock.symbol)}"
-                  />
-                  <button class="step-btn btn-inc" data-id="${stock.id}" title="Increase weight">+</button>
+          <div class="stock-drawer" data-drawer-for="${s.id}">
+            <div class="drawer-content">
+              <div class="drawer-left">
+                <div class="weight-control-group">
+                  <span class="drawer-label">Weight</span>
+                  <div class="weight-stepper">
+                    <button class="step-btn" data-dec="${s.id}" title="Decrease weight" aria-label="Decrease weight">−</button>
+                    <input type="number" class="weight-input" data-weight="${s.id}" value="${s.weight}" min="0" max="999" step="1" aria-label="Stock weight" />
+                    <button class="step-btn" data-inc="${s.id}" title="Increase weight" aria-label="Increase weight">+</button>
+                  </div>
+                </div>
+
+                <div class="time-badge ${timeInfo.freshnessClass}" data-time-id="${s.id}" title="Time elapsed since last quote update">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span class="time-text">${timeInfo.text}</span>
                 </div>
               </div>
 
-              <button class="btn-remove" data-id="${stock.id}" title="Remove ${escapeHtml(stock.symbol)}">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
+              <button class="btn-remove" data-del="${s.id}" title="Remove stock from watchlist" aria-label="Remove stock">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                 </svg>
+                Remove
               </button>
             </div>
           </div>
+        </div>`;
+          })
+          .join('');
+
+  appEl.innerHTML = `
+    <div class="app-container">
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-logo" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+              <rect x="12" y="34" width="6" height="14" rx="2" fill="#34d399"/>
+              <rect x="22" y="24" width="6" height="24" rx="2" fill="#34d399"/>
+              <rect x="32" y="30" width="6" height="18" rx="2" fill="#f87171"/>
+              <rect x="42" y="16" width="6" height="32" rx="2" fill="#34d399"/>
+              <path d="M 12 36 Q 22 28 32 32 T 48 14" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="48" cy="14" r="3.5" fill="#ffffff"/>
+            </svg>
+          </div>
+          <div class="brand-info">
+            <h1 class="brand-title">Market Weight Tracker</h1>
+            <p class="brand-subtitle">Live weighted breadth &amp; sentiment</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Search Section -->
+      <div class="search-section">
+        <div class="search-trigger-bar" id="search-trigger" role="button" tabindex="0" aria-label="Search and add stock">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <span class="search-placeholder">Search stocks (e.g. Reliance, TCS, AAPL)...</span>
+          <kbd class="search-kbd">/</kbd>
+        </div>
+        <button class="btn-refresh" id="btn-refresh" title="Refresh live quotes" aria-label="Refresh quotes">
+          <svg class="refresh-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 21h5v-5"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Top Breadth Bar Card -->
+      <div class="breadth-card">
+        <div class="breadth-top">
+          <div class="breadth-left">
+            <div class="breadth-title-row">
+              <span class="breadth-tag">Weighted Breadth</span>
+              <span class="breadth-sentiment-pill ${sentimentClass}" id="breadth-sentiment-pill">${sentimentText}</span>
+            </div>
+            <div class="breadth-ratio-row">
+              <span class="ratio-val green" id="green-ratio-val">${stats.weightedGreen}</span>
+              <span class="ratio-label-sm">Up</span>
+              <span class="ratio-divider">:</span>
+              <span class="ratio-val red" id="red-ratio-val">${stats.weightedRed}</span>
+              <span class="ratio-label-sm">Down</span>
+            </div>
+          </div>
+          <div class="breadth-right">
+            <div class="breadth-pct-summary" id="breadth-pct-sum">
+              <span class="pct-green-txt">${stats.greenPercentage}%</span> vs <span class="pct-red-txt">${stats.redPercentage}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="breadth-bar-track">
+          <div class="bar-green" id="bar-green-seg" style="width: ${total > 0 ? greenBar : 50}%"></div>
+          <div class="bar-red" id="bar-red-seg" style="width: ${total > 0 ? redBar : 50}%"></div>
         </div>
       </div>
-    `;
-    })
-    .join('');
 
-  attachWatchlistEventListeners();
+      <!-- Watchlist Section -->
+      <section class="watchlist-section">
+        <div class="watchlist-header">
+          <span class="watchlist-title">Watchlist</span>
+          <span class="watchlist-count">${watchlist.length} stock${watchlist.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="stock-list" id="stock-list">${stocksHtml}</div>
+      </section>
+
+      <!-- Footer Actions -->
+      <div class="footer-actions">
+        <button class="footer-btn" id="btn-reset">Restore Sample</button>
+        <span class="footer-sep">|</span>
+        <button class="footer-btn danger" id="btn-clear">Clear Watchlist</button>
+        <button class="install-btn" id="btn-install">📲 Install App</button>
+      </div>
+    </div>`;
+
+  bindEvents();
 }
 
-/**
- * Updates all time counter badges dynamically without re-rendering the whole list.
- */
-function updateAllTimeBadges(): void {
-  for (const stock of watchlist) {
-    const badge = stockListContainer.querySelector(`[data-time-id="${stock.id}"]`);
-    if (badge) {
-      const timeInfo = formatTimeAgo(stock.lastUpdated);
-      const textSpan = badge.querySelector('.time-text');
-      if (textSpan) textSpan.textContent = timeInfo.text;
-      badge.className = `time-counter-badge ${timeInfo.freshnessClass}`;
+// ===== Event Listeners =====
+function bindEvents(): void {
+  // Search Bar Trigger
+  document.getElementById('search-trigger')?.addEventListener('click', openModal);
+
+  // Refresh Button
+  document.getElementById('btn-refresh')?.addEventListener('click', refreshAll);
+
+  // Restore Default Sample
+  document.getElementById('btn-reset')?.addEventListener('click', () => {
+    if (confirm('Restore default sample watchlist (4:2 ratio)?')) {
+      watchlist = resetWatchlist();
+      expandedId = null;
+      render();
+      refreshAll();
     }
+  });
+
+  // Clear Watchlist
+  document.getElementById('btn-clear')?.addEventListener('click', () => {
+    if (confirm('Clear your entire watchlist?')) {
+      watchlist = clearWatchlist();
+      expandedId = null;
+      render();
+    }
+  });
+
+  // PWA Install Button
+  const installBtn = document.getElementById('btn-install');
+  if (installBtn && deferredPrompt) {
+    installBtn.style.display = 'inline-flex';
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+      }
+    });
   }
-}
 
-/**
- * Attaches event listeners for weight steppers, numeric inputs, and remove buttons.
- */
-function attachWatchlistEventListeners(): void {
-  // Stepper increment
-  stockListContainer.querySelectorAll('.btn-inc').forEach((btn) => {
+  // Stock Row Click (Accordion Toggle)
+  document.querySelectorAll('[data-toggle-id]').forEach((row) => {
+    row.addEventListener('click', (e) => {
+      // If clicking inside drawer or buttons, do not toggle
+      if ((e.target as HTMLElement).closest('.stock-drawer')) return;
+
+      const id = row.getAttribute('data-toggle-id');
+      expandedId = expandedId === id ? null : id;
+
+      // Update expanded styling without tearing down inputs
+      document.querySelectorAll('.stock-card').forEach((card) => {
+        const cardId = card.getAttribute('data-stock-card');
+        if (cardId === expandedId) {
+          card.classList.add('expanded');
+        } else {
+          card.classList.remove('expanded');
+        }
+      });
+    });
+  });
+
+  // Stepper: Increase weight
+  document.querySelectorAll('[data-inc]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
-      const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-      const stock = watchlist.find((s) => s.id === id);
-      if (stock) {
-        stock.weight = (stock.weight || 0) + 1;
+      e.stopPropagation();
+      const id = (btn as HTMLElement).getAttribute('data-inc')!;
+      const s = watchlist.find((x) => x.id === id);
+      if (s) {
+        s.weight++;
         saveAndSync();
-        renderWatchlist();
+        // Update input and badge directly
+        const input = document.querySelector(`input[data-weight="${id}"]`) as HTMLInputElement;
+        if (input) input.value = s.weight.toString();
+        const badge = document.querySelector(`[data-badge-for="${id}"]`);
+        if (badge) badge.textContent = `${s.weight}× wt`;
+        syncBreadthUI();
       }
     });
   });
 
-  // Stepper decrement
-  stockListContainer.querySelectorAll('.btn-dec').forEach((btn) => {
+  // Stepper: Decrease weight
+  document.querySelectorAll('[data-dec]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
-      const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-      const stock = watchlist.find((s) => s.id === id);
-      if (stock && stock.weight > 0) {
-        stock.weight = stock.weight - 1;
+      e.stopPropagation();
+      const id = (btn as HTMLElement).getAttribute('data-dec')!;
+      const s = watchlist.find((x) => x.id === id);
+      if (s && s.weight > 0) {
+        s.weight--;
         saveAndSync();
-        renderWatchlist();
+        // Update input and badge directly
+        const input = document.querySelector(`input[data-weight="${id}"]`) as HTMLInputElement;
+        if (input) input.value = s.weight.toString();
+        const badge = document.querySelector(`[data-badge-for="${id}"]`);
+        if (badge) badge.textContent = `${s.weight}× wt`;
+        syncBreadthUI();
       }
     });
   });
 
-  // Direct numeric input change
-  stockListContainer.querySelectorAll('.weight-input').forEach((input) => {
-    input.addEventListener('change', (e) => {
-      const target = e.currentTarget as HTMLInputElement;
-      const id = target.getAttribute('data-id');
-      const val = parseFloat(target.value);
-      const stock = watchlist.find((s) => s.id === id);
-      if (stock) {
-        stock.weight = isNaN(val) || val < 0 ? 0 : Math.round(val);
-        saveAndSync();
-        renderWatchlist();
-      }
-    });
+  // Numeric weight input
+  document.querySelectorAll('.weight-input').forEach((input) => {
+    input.addEventListener('click', (e) => e.stopPropagation());
 
-    // Real-time update on typing without losing focus
     input.addEventListener('input', (e) => {
-      const target = e.currentTarget as HTMLInputElement;
-      const id = target.getAttribute('data-id');
-      const val = parseFloat(target.value);
-      const stock = watchlist.find((s) => s.id === id);
-      if (stock && !isNaN(val) && val >= 0) {
-        stock.weight = Math.round(val);
+      e.stopPropagation();
+      const el = e.target as HTMLInputElement;
+      const id = el.getAttribute('data-weight')!;
+      const val = parseInt(el.value, 10);
+      const s = watchlist.find((x) => x.id === id);
+      if (s && !isNaN(val) && val >= 0) {
+        s.weight = val;
         saveAndSync();
-        renderBreadthBar();
+        const badge = document.querySelector(`[data-badge-for="${id}"]`);
+        if (badge) badge.textContent = `${s.weight}× wt`;
+        syncBreadthUI();
+      }
+    });
+
+    input.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const el = e.target as HTMLInputElement;
+      const id = el.getAttribute('data-weight')!;
+      const val = parseInt(el.value, 10);
+      const s = watchlist.find((x) => x.id === id);
+      if (s) {
+        s.weight = isNaN(val) || val < 0 ? 0 : val;
+        el.value = s.weight.toString();
+        saveAndSync();
+        const badge = document.querySelector(`[data-badge-for="${id}"]`);
+        if (badge) badge.textContent = `${s.weight}× wt`;
+        syncBreadthUI();
       }
     });
   });
 
-  // Remove button
-  stockListContainer.querySelectorAll('.btn-remove').forEach((btn) => {
+  // Delete Stock
+  document.querySelectorAll('[data-del]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
-      const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
-      watchlist = watchlist.filter((s) => s.id !== id);
+      e.stopPropagation();
+      const id = (btn as HTMLElement).getAttribute('data-del')!;
+      watchlist = watchlist.filter((x) => x.id !== id);
+      if (expandedId === id) expandedId = null;
       saveAndSync();
-      renderWatchlist();
+      render();
     });
   });
 }
 
-/**
- * Saves current watchlist to localStorage and flashes saved status.
- */
-function saveAndSync(): void {
-  saveWatchlist(watchlist);
-  if (lastSyncStatus) {
-    lastSyncStatus.textContent = 'Saved to memory';
-    setTimeout(() => {
-      if (lastSyncStatus) lastSyncStatus.textContent = 'All memory saved';
-    }, 2000);
-  }
-}
-
-// ================= Stock Search & Add Logic =================
-
-/**
- * Adds a selected stock to the watchlist.
- */
-async function addStockToWatchlist(symbol: string, initialWeight = 1, knownInfo?: Partial<StockInfo>): Promise<void> {
-  const cleanSym = symbol.trim().toUpperCase();
-  if (!cleanSym) return;
-
-  // Check if stock already exists in watchlist
-  const existing = watchlist.find(
-    (s) => s.symbol.toUpperCase() === cleanSym || s.id.toUpperCase() === cleanSym
-  );
-  if (existing) {
-    existing.weight = (existing.weight || 0) + 1;
-    saveAndSync();
-    renderWatchlist();
-    highlightExistingStock(existing.id);
-    return;
-  }
-
-  // If known info is already provided from search selection
-  if (knownInfo && knownInfo.currentPrice !== undefined) {
-    const newStock: WatchlistStock = {
-      id: cleanSym,
-      symbol: cleanSym,
-      fullName: knownInfo.fullName || cleanSym,
-      currentPrice: knownInfo.currentPrice,
-      changePercent: knownInfo.changePercent || '0.00%',
-      rawPercent: knownInfo.rawPercent || 0,
-      weight: initialWeight,
-      currency: knownInfo.currency || 'INR',
-      exchange: knownInfo.exchange,
-      lastUpdated: Date.now(),
-    };
-    watchlist.unshift(newStock);
-    saveAndSync();
-    renderWatchlist();
-    return;
-  }
-
-  // Otherwise fetch quote from API
-  try {
-    const quotes = await getStockSummaries([cleanSym]);
-    const quote = quotes[0];
-
-    const newStock: WatchlistStock = {
-      id: cleanSym,
-      symbol: quote ? quote.symbol : cleanSym,
-      fullName: quote ? quote.fullName : cleanSym,
-      currentPrice: quote ? quote.currentPrice : 100,
-      changePercent: quote ? quote.changePercent : '0.00%',
-      rawPercent: quote ? quote.rawPercent : 0,
-      weight: initialWeight,
-      currency: quote ? quote.currency : 'INR',
-      exchange: quote ? quote.exchange : undefined,
-      lastUpdated: Date.now(),
-    };
-
-    watchlist.unshift(newStock);
-    saveAndSync();
-    renderWatchlist();
-  } catch (err) {
-    console.error('Failed to add stock:', err);
-  }
-}
-
-/**
- * Highlights a stock card when user re-adds or interacts with it.
- */
-function highlightExistingStock(id: string): void {
-  const card = stockListContainer.querySelector(`[data-id="${id}"]`) as HTMLElement;
-  if (card) {
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    card.style.transition = 'background-color 0.3s ease';
-    card.style.backgroundColor = 'var(--pastel-accent-bg)';
-    setTimeout(() => {
-      card.style.backgroundColor = '#ffffff';
-    }, 1000);
-  }
-}
-
-// ================= Modal Logic =================
-
-function openSearchModal(): void {
+// ===== Search Modal Management =====
+function openModal(): void {
   searchModal.classList.add('open');
   searchModal.setAttribute('aria-hidden', 'false');
   modalSearchInput.value = '';
-  modalSearchResults.innerHTML = `
-    <div class="search-hint-message">
-      Type a company name or ticker symbol to search...
-    </div>
-  `;
-  setTimeout(() => {
-    modalSearchInput.focus();
-  }, 100);
+  modalSearchResults.innerHTML = `<div class="modal-hint">Type a ticker or company name to search across India &amp; US markets...</div>`;
+  setTimeout(() => modalSearchInput.focus(), 60);
 }
 
-function closeSearchModal(): void {
+function closeModal(): void {
   searchModal.classList.remove('open');
   searchModal.setAttribute('aria-hidden', 'true');
-  modalSearchInput.value = '';
 }
 
-function handleModalSearchInput(): void {
-  const query = modalSearchInput.value.trim();
+function handleModalInput(): void {
+  const q = modalSearchInput.value.trim();
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
 
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer);
-  }
-
-  if (query.length < 1) {
-    modalSearchResults.innerHTML = `
-      <div class="search-hint-message">
-        Type a company name or ticker symbol to search...
-      </div>
-    `;
+  if (q.length < 1) {
+    modalSearchResults.innerHTML = `<div class="modal-hint">Type a ticker or company name to search across India &amp; US markets...</div>`;
     return;
   }
 
-  modalSearchResults.innerHTML = `
-    <div class="search-hint-message">Searching...</div>
-  `;
+  modalSearchResults.innerHTML = `<div class="modal-hint">Searching markets...</div>`;
 
   searchDebounceTimer = setTimeout(async () => {
-    const results = await searchStock(query);
+    const results = await searchStock(q);
 
     if (results.length === 0) {
-      modalSearchResults.innerHTML = `
-        <div class="search-hint-message">
-          No matching stocks found for "<strong>${escapeHtml(query)}</strong>".
-        </div>
-      `;
+      modalSearchResults.innerHTML = `<div class="modal-hint">No results found for "<strong>${esc(q)}</strong>"</div>`;
       return;
     }
 
     modalSearchResults.innerHTML = results
       .map((r) => {
-        const isUp = r.rawPercent > 0;
-        const isDown = r.rawPercent < 0;
-        const changeClass = isUp ? 'up' : isDown ? 'down' : 'neutral';
-        const formattedPrice = formatPrice(r.currentPrice, r.currency);
-
+        const cls = r.rawPercent > 0 ? 'up' : r.rawPercent < 0 ? 'down' : 'neutral';
         return `
-        <div class="search-result-item" data-sym="${escapeHtml(r.symbol)}" data-name="${escapeHtml(r.fullName)}" data-price="${r.currentPrice}" data-change="${escapeHtml(r.changePercent)}" data-raw="${r.rawPercent}" data-curr="${r.currency || 'INR'}" data-exch="${escapeHtml(r.exchange || '')}">
-          <div class="result-info">
-            <div class="result-sym-row">
-              <span class="result-sym">${escapeHtml(r.symbol)}</span>
-              ${r.exchange ? `<span class="result-exch">${escapeHtml(r.exchange)}</span>` : ''}
+        <div class="modal-result-row" data-sym="${esc(r.symbol)}" data-name="${esc(r.fullName)}" data-price="${r.currentPrice}" data-change="${esc(r.changePercent)}" data-raw="${r.rawPercent}" data-curr="${r.currency || 'INR'}" data-exch="${esc(r.exchange || '')}">
+          <div class="mr-info">
+            <div class="mr-title-line">
+              <span class="mr-ticker">${esc(r.symbol)}</span>
+              ${r.exchange ? `<span class="mr-exch">${esc(r.exchange)}</span>` : ''}
             </div>
-            <span class="result-name">${escapeHtml(r.fullName)}</span>
+            <div class="mr-name">${esc(r.fullName)}</div>
           </div>
-          <div class="result-right">
-            <div class="result-price-box">
-              <div class="result-price">${formattedPrice}</div>
-              <span class="stock-change ${changeClass}">${escapeHtml(r.changePercent)}</span>
-            </div>
-            <button class="btn-mini-add">Add</button>
+          <div class="mr-quotes">
+            <div class="mr-price">${formatPrice(r.currentPrice, r.currency)}</div>
+            <div class="mr-pct ${cls}">${esc(r.changePercent)}</div>
           </div>
-        </div>
-      `;
+        </div>`;
       })
       .join('');
 
-    // Attach click events on dropdown items
-    modalSearchResults.querySelectorAll('.search-result-item').forEach((item) => {
-      item.addEventListener('click', () => {
-        const sym = item.getAttribute('data-sym')!;
-        const fullName = item.getAttribute('data-name')!;
-        const currentPrice = parseFloat(item.getAttribute('data-price') || '0');
-        const changePercent = item.getAttribute('data-change') || '0.00%';
-        const rawPercent = parseFloat(item.getAttribute('data-raw') || '0');
-        const currency = item.getAttribute('data-curr') || 'INR';
-        const exchange = item.getAttribute('data-exch') || '';
-
-        addStockToWatchlist(sym, 1, {
-          symbol: sym,
-          fullName,
-          currentPrice,
-          changePercent,
-          rawPercent,
-          currency,
-          exchange,
+    modalSearchResults.querySelectorAll('.modal-result-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        addStock(row.getAttribute('data-sym')!, 1, {
+          symbol: row.getAttribute('data-sym')!,
+          fullName: row.getAttribute('data-name')!,
+          currentPrice: parseFloat(row.getAttribute('data-price')!),
+          changePercent: row.getAttribute('data-change')!,
+          rawPercent: parseFloat(row.getAttribute('data-raw')!),
+          currency: row.getAttribute('data-curr')!,
+          exchange: row.getAttribute('data-exch')!,
         });
-
-        closeSearchModal();
+        closeModal();
       });
     });
   }, 220);
 }
 
-/**
- * Refreshes all quotes in the watchlist with live market data and updates timestamps.
- */
-async function refreshAllQuotes(): Promise<void> {
-  if (watchlist.length === 0) return;
+// Modal event listeners
+btnCloseModal.addEventListener('click', closeModal);
+modalSearchInput.addEventListener('input', handleModalInput);
 
-  btnRefresh.classList.add('spinning');
-  refreshText.textContent = 'Updating...';
+searchModal.addEventListener('click', (e) => {
+  if (e.target === searchModal) closeModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && searchModal.classList.contains('open')) {
+    closeModal();
+  }
+  if (
+    (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) &&
+    !searchModal.classList.contains('open') &&
+    document.activeElement?.tagName !== 'INPUT'
+  ) {
+    e.preventDefault();
+    openModal();
+  }
+});
+
+// ===== Stock Addition Logic =====
+async function addStock(symbol: string, weight = 1, info?: Partial<StockInfo>): Promise<void> {
+  const sym = symbol.trim().toUpperCase();
+  if (!sym) return;
+
+  const existing = watchlist.find((s) => s.symbol.toUpperCase() === sym || s.id === sym);
+  if (existing) {
+    existing.weight++;
+    saveAndSync();
+    render();
+    return;
+  }
+
+  if (info && info.currentPrice !== undefined) {
+    watchlist.unshift({
+      id: sym,
+      symbol: sym,
+      fullName: info.fullName || sym,
+      currentPrice: info.currentPrice,
+      changePercent: info.changePercent || '0.00%',
+      rawPercent: info.rawPercent || 0,
+      weight,
+      currency: info.currency || 'INR',
+      exchange: info.exchange,
+      lastUpdated: Date.now(),
+    });
+  } else {
+    const quotes = await getStockSummaries([sym]);
+    const q = quotes[0];
+    watchlist.unshift({
+      id: sym,
+      symbol: q?.symbol || sym,
+      fullName: q?.fullName || sym,
+      currentPrice: q?.currentPrice || 0,
+      changePercent: q?.changePercent || '0.00%',
+      rawPercent: q?.rawPercent || 0,
+      weight,
+      currency: q?.currency || 'INR',
+      exchange: q?.exchange,
+      lastUpdated: Date.now(),
+    });
+  }
+
+  expandedId = sym; // Auto-expand new stock so user can adjust weight immediately
+  saveAndSync();
+  render();
+}
+
+// ===== Quotes Refresh Logic =====
+async function refreshAll(): Promise<void> {
+  if (watchlist.length === 0) return;
+  const btn = document.getElementById('btn-refresh');
+  btn?.classList.add('spinning');
 
   try {
-    const symbols = watchlist.map((s) => s.symbol);
-    const updatedData = await getStockSummaries(symbols);
-
-    const dataMap = new Map<string, StockInfo>();
-    for (const d of updatedData) {
-      dataMap.set(d.symbol.toUpperCase(), d);
-    }
+    const data = await getStockSummaries(watchlist.map((s) => s.symbol));
+    const map = new Map<string, StockInfo>();
+    for (const d of data) map.set(d.symbol.toUpperCase(), d);
 
     const now = Date.now();
-    watchlist = watchlist.map((stock) => {
-      const fresh = dataMap.get(stock.symbol.toUpperCase());
-      if (fresh) {
-        return {
-          ...stock,
-          fullName: fresh.fullName || stock.fullName,
-          currentPrice: fresh.currentPrice,
-          changePercent: fresh.changePercent,
-          rawPercent: fresh.rawPercent,
-          currency: fresh.currency || stock.currency,
-          exchange: fresh.exchange || stock.exchange,
-          lastUpdated: now,
-        };
-      }
-      return stock;
+    watchlist = watchlist.map((s) => {
+      const fresh = map.get(s.symbol.toUpperCase());
+      return fresh
+        ? {
+            ...s,
+            fullName: fresh.fullName || s.fullName,
+            currentPrice: fresh.currentPrice,
+            changePercent: fresh.changePercent,
+            rawPercent: fresh.rawPercent,
+            currency: fresh.currency || s.currency,
+            exchange: fresh.exchange || s.exchange,
+            lastUpdated: now,
+          }
+        : s;
     });
 
     saveAndSync();
-    renderWatchlist();
+    render();
   } catch (err) {
-    console.error('Failed to refresh quotes:', err);
+    console.error('[Refresh] Failed to update quotes:', err);
   } finally {
-    setTimeout(() => {
-      btnRefresh.classList.remove('spinning');
-      refreshText.textContent = 'Refresh';
-    }, 400);
+    setTimeout(() => document.getElementById('btn-refresh')?.classList.remove('spinning'), 450);
   }
 }
 
-// ================= Event Listeners =================
-
-// Modal open/close listeners
-btnOpenSearch.addEventListener('click', openSearchModal);
-btnCloseModal.addEventListener('click', closeSearchModal);
-
-btnClearSearch.addEventListener('click', () => {
-  modalSearchInput.value = '';
-  modalSearchInput.focus();
-  handleModalSearchInput();
-});
-
-modalSearchInput.addEventListener('input', handleModalSearchInput);
-
-// Close modal on backdrop click
-searchModal.addEventListener('click', (e) => {
-  if (e.target === searchModal) {
-    closeSearchModal();
+// ===== Live Elapsed Time Updater =====
+function updateTimeBadges(): void {
+  for (const s of watchlist) {
+    const el = document.querySelector(`[data-time-id="${s.id}"]`);
+    if (el) {
+      const t = formatTimeAgo(s.lastUpdated);
+      const textEl = el.querySelector('.time-text');
+      if (textEl) textEl.textContent = t.text;
+      el.className = `time-badge ${t.freshnessClass}`;
+    }
   }
-});
+}
 
-// ESC key closes modal
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && searchModal.classList.contains('open')) {
-    closeSearchModal();
-  }
-});
-
-// Header Refresh button
-btnRefresh.addEventListener('click', () => {
-  refreshAllQuotes();
-});
-
-// Reset Sample Watchlist (4:2 example)
-btnResetSample.addEventListener('click', () => {
-  if (confirm('Restore the default 4:2 sample watchlist (RELIANCE, TCS, NVDA, TSLA)?')) {
-    watchlist = resetWatchlist();
-    renderWatchlist();
-    refreshAllQuotes();
-  }
-});
-
-// Clear All Watchlist
-btnClearAll.addEventListener('click', () => {
-  if (confirm('Are you sure you want to clear your entire watchlist?')) {
-    watchlist = clearWatchlist();
-    renderWatchlist();
-  }
-});
-
-// ================= PWA Registration =================
+// ===== PWA Service Worker Registration =====
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('./sw.js')
-      .then((reg) => {
-        console.log('[PWA] ServiceWorker registered successfully:', reg.scope);
-      })
-      .catch((err) => {
-        console.log('[PWA] ServiceWorker registration failed:', err);
-      });
+      .then((reg) => console.log('[PWA] ServiceWorker registered with scope:', reg.scope))
+      .catch((err) => console.warn('[PWA] ServiceWorker registration failed:', err));
   });
 }
 
-// PWA Install prompt handling
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  if (btnInstallPwa) {
-    btnInstallPwa.style.display = 'inline-block';
-    btnInstallPwa.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log('[PWA] User install choice:', outcome);
-        deferredPrompt = null;
-        btnInstallPwa.style.display = 'none';
-      }
-    });
-  }
+  const installBtn = document.getElementById('btn-install');
+  if (installBtn) installBtn.style.display = 'inline-flex';
 });
 
-// Check if launched from PWA shortcut (e.g. ?action=search)
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('action') === 'search') {
-    setTimeout(openSearchModal, 400);
-  }
-});
-
-// ================= Utility =================
-function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-// ================= Initialization =================
-renderWatchlist();
-
-// Live ticker for time counter badges every 5 seconds
-setInterval(() => {
-  updateAllTimeBadges();
-}, 5000);
-
-// Background initial refresh of quotes if watchlist exists
+// ===== App Initialization =====
+render();
 if (watchlist.length > 0) {
-  setTimeout(() => {
-    refreshAllQuotes();
-  }, 300);
+  setTimeout(refreshAll, 300);
 }
 
-// Auto-refresh every 60 seconds when tab is active
+// Periodic background ticks
+setInterval(updateTimeBadges, 5000);
 setInterval(() => {
   if (document.visibilityState === 'visible' && watchlist.length > 0) {
-    refreshAllQuotes();
+    refreshAll();
   }
 }, 60000);
