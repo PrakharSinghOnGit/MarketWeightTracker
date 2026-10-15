@@ -5,7 +5,7 @@
   --card-hover: #fafbfd;
   --border: #e2e8f0;
   --border-subtle: #edf2f7;
-  --border-focus: #6366f1;
+  --border-focus: #0f172a;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
@@ -25,12 +25,6 @@
   --neutral: #64748b;
   --neutral-bg: #f1f5f9;
 
-  /* Brand Accent */
-  --brand-from: #4f46e5;
-  --brand-to: #7c3aed;
-  --brand-light: #eef2ff;
-  --brand-text: #4338ca;
-
   /* Layout & Radii */
   --radius: 14px;
   --radius-sm: 8px;
@@ -40,10 +34,12 @@
   --shadow-lg: 0 20px 35px -8px rgba(15, 23, 42, 0.15);
 }
 
+/* touch-action manipulation prevents iOS double-tap to zoom */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  touch-action: manipulation;
 }
 
 html {
@@ -53,14 +49,20 @@ html {
   -webkit-text-size-adjust: 100%;
   color: var(--text-primary);
   background-color: var(--bg);
+  touch-action: manipulation;
 }
 
 body {
   min-height: 100dvh;
   background-color: var(--bg);
-  padding: 0 0 env(safe-area-inset-bottom);
   color: var(--text-primary);
   line-height: 1.45;
+  overscroll-behavior-y: none;
+  /* iOS Safe Area Padding for Notch / Dynamic Island / Home Indicator */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 button {
@@ -69,17 +71,21 @@ button {
   border: none;
   background: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 input {
   font: inherit;
+  touch-action: manipulation;
 }
 
 /* ===== APP CONTAINER ===== */
 .app-container {
   max-width: 620px;
   margin: 0 auto;
-  padding: 20px 16px 36px;
+  padding: 18px 16px 36px;
 }
 
 /* ===== APP HEADER ===== */
@@ -96,16 +102,17 @@ input {
   gap: 12px;
 }
 
+/* Clean dark slate logo (No generic gradient!) */
 .brand-logo {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--brand-from) 0%, var(--brand-to) 100%);
+  background-color: #0f172a;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.28);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2);
 }
 
 .brand-info {
@@ -150,7 +157,9 @@ input {
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  -webkit-user-select: none;
   box-shadow: var(--shadow-sm);
+  touch-action: manipulation;
 }
 
 .search-trigger-bar:hover {
@@ -197,12 +206,17 @@ input {
   box-shadow: var(--shadow-sm);
   transition: all 0.15s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .btn-refresh:hover {
   border-color: #cbd5e1;
   color: var(--text-primary);
   background-color: var(--card-hover);
+}
+
+.btn-refresh:active {
+  background-color: #f1f5f9;
 }
 
 .btn-refresh.spinning svg {
@@ -383,6 +397,8 @@ input {
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 .stock-card:hover {
@@ -403,10 +419,15 @@ input {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background-color 0.12s ease;
+  touch-action: manipulation;
 }
 
 .stock-row:hover {
   background-color: var(--card-hover);
+}
+
+.stock-row:active {
+  background-color: #f1f5f9;
 }
 
 /* Stock Avatar (2-letter Initials) */
@@ -472,8 +493,9 @@ input {
 .stock-weight-badge {
   font-size: 0.6875rem;
   font-weight: 700;
-  background: var(--brand-light);
-  color: var(--brand-text);
+  background: #f1f5f9;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
   padding: 1px 7px;
   border-radius: 999px;
   flex-shrink: 0;
@@ -548,6 +570,7 @@ input {
   background: #f8fafc;
   border-top: 1px solid var(--border-subtle);
   padding: 10px 16px;
+  touch-action: manipulation;
 }
 
 .stock-card.expanded .stock-drawer {
@@ -589,20 +612,27 @@ input {
   border: 1.5px solid var(--border);
   border-radius: var(--radius-xs);
   overflow: hidden;
-  height: 32px;
+  height: 34px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
+/* Step Buttons with touch-action: manipulation and no double-tap zoom */
 .step-btn {
-  width: 30px;
+  width: 34px;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--text-secondary);
   transition: background-color 0.1s ease;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .step-btn:hover {
@@ -614,16 +644,18 @@ input {
   background-color: #e2e8f0;
 }
 
+/* 16px font-size prevents iOS Safari automatic viewport zoom on input focus! */
 .weight-input {
-  width: 36px;
+  width: 38px;
   height: 100%;
   border: none;
   background: transparent;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 16px; /* Must be 16px or above for iOS not to auto-zoom */
   font-weight: 800;
   color: var(--text-primary);
   outline: none;
+  touch-action: manipulation;
   -moz-appearance: textfield;
 }
 
@@ -653,7 +685,7 @@ input {
   display: flex;
   align-items: center;
   gap: 5px;
-  height: 32px;
+  height: 34px;
   padding: 0 12px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--red-border);
@@ -662,11 +694,16 @@ input {
   font-size: 0.75rem;
   font-weight: 700;
   transition: all 0.12s ease;
+  touch-action: manipulation;
 }
 
 .btn-remove:hover {
   background: var(--red-bg);
   border-color: #fca5a5;
+}
+
+.btn-remove:active {
+  background: #fee2e2;
 }
 
 /* ===== EMPTY STATE ===== */
@@ -703,6 +740,7 @@ input {
   justify-content: center;
   gap: 10px;
   padding-top: 14px;
+  flex-wrap: wrap;
 }
 
 .footer-btn {
@@ -712,6 +750,7 @@ input {
   padding: 6px 10px;
   border-radius: var(--radius-xs);
   transition: color 0.12s ease;
+  touch-action: manipulation;
 }
 
 .footer-btn:hover {
@@ -729,28 +768,29 @@ input {
 
 .install-btn {
   display: none;
-  background: var(--brand-light);
-  color: var(--brand-text);
-  border: 1px solid #c7d2fe;
+  background: #0f172a;
+  color: #ffffff;
   border-radius: var(--radius-xs);
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 5px 12px;
+  padding: 6px 12px;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition: opacity 0.12s ease;
+  touch-action: manipulation;
 }
 
 .install-btn:hover {
-  background: #e0e7ff;
+  opacity: 0.9;
 }
 
-/* ===== MODAL ===== */
+/* ===== MODALS ===== */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -794,14 +834,16 @@ input {
   flex-shrink: 0;
 }
 
+/* 16px font-size prevents iOS Safari auto-zoom */
 .modal-search-input {
   flex: 1;
   border: none;
   outline: none;
-  font-size: 0.9375rem;
+  font-size: 16px; /* Must be at least 16px for iOS Safari */
   font-weight: 500;
   color: var(--text-primary);
   background: transparent;
+  touch-action: manipulation;
 }
 
 .modal-search-input::placeholder {
@@ -818,6 +860,7 @@ input {
   color: var(--text-muted);
   flex-shrink: 0;
   transition: all 0.1s ease;
+  touch-action: manipulation;
 }
 
 .modal-close-btn:hover {
@@ -846,6 +889,7 @@ input {
   cursor: pointer;
   transition: background-color 0.1s ease;
   border-bottom: 1px solid #f8fafc;
+  touch-action: manipulation;
 }
 
 .modal-result-row:last-child {
@@ -913,6 +957,64 @@ input {
 .mr-pct.up { color: var(--green-text); }
 .mr-pct.down { color: var(--red-text); }
 .mr-pct.neutral { color: var(--text-muted); }
+
+/* ===== iOS INSTALL SHEET ===== */
+.ios-sheet {
+  padding: 20px 20px 24px;
+}
+
+.ios-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ios-sheet-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ios-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ios-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ios-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ios-step-txt {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.ios-inline-icon {
+  display: inline-block;
+  vertical-align: -3px;
+  margin: 0 2px;
+}
 
 /* ===== MOBILE RESPONSIVE TWEAKS ===== */
 @media (max-width: 480px) {

@@ -4,6 +4,12 @@ import { loadWatchlist, saveWatchlist, resetWatchlist, clearWatchlist } from './
 import { calculateBreadth, formatPrice, formatTimeAgo } from './utils';
 import { getStockSummaries, searchStock } from './api';
 
+// ===== Platform Detection =====
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+const isStandalone =
+  (window.navigator as any).standalone === true ||
+  window.matchMedia('(display-mode: standalone)').matches;
+
 // ===== Application State =====
 let watchlist: WatchlistStock[] = loadWatchlist();
 let expandedId: string | null = null;
@@ -16,6 +22,21 @@ const searchModal = document.getElementById('search-modal')!;
 const modalSearchInput = document.getElementById('modal-search-input') as HTMLInputElement;
 const btnCloseModal = document.getElementById('btn-close-modal')!;
 const modalSearchResults = document.getElementById('modal-search-results')!;
+
+// iOS Sheet DOM
+const iosInstallModal = document.getElementById('ios-install-modal')!;
+const btnCloseIosModal = document.getElementById('btn-close-ios-modal')!;
+
+// Prevent iOS double-click zoom on interactive elements
+document.addEventListener(
+  'dblclick',
+  (e) => {
+    if ((e.target as HTMLElement).closest('.step-btn, .weight-stepper, .stock-card, button, input')) {
+      e.preventDefault();
+    }
+  },
+  { passive: false }
+);
 
 // ===== Helper Functions =====
 function esc(s: string): string {
@@ -159,7 +180,7 @@ function render(): void {
                   <span class="drawer-label">Weight</span>
                   <div class="weight-stepper">
                     <button class="step-btn" data-dec="${s.id}" title="Decrease weight" aria-label="Decrease weight">−</button>
-                    <input type="number" class="weight-input" data-weight="${s.id}" value="${s.weight}" min="0" max="999" step="1" aria-label="Stock weight" />
+                    <input type="number" class="weight-input" data-weight="${s.id}" value="${s.weight}" min="0" max="999" step="1" inputmode="numeric" aria-label="Stock weight" />
                     <button class="step-btn" data-inc="${s.id}" title="Increase weight" aria-label="Increase weight">+</button>
                   </div>
                 </div>
@@ -193,13 +214,20 @@ function render(): void {
       <header class="app-header">
         <div class="brand">
           <div class="brand-logo" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
-              <rect x="12" y="34" width="6" height="14" rx="2" fill="#34d399"/>
-              <rect x="22" y="24" width="6" height="24" rx="2" fill="#34d399"/>
-              <rect x="32" y="30" width="6" height="18" rx="2" fill="#f87171"/>
-              <rect x="42" y="16" width="6" height="32" rx="2" fill="#34d399"/>
-              <path d="M 12 36 Q 22 28 32 32 T 48 14" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="48" cy="14" r="3.5" fill="#ffffff"/>
+            <svg width="26" height="26" viewBox="0 0 64 64" fill="none">
+              <!-- Trending up arrow: clean financial trendline with arrowhead -->
+              <path d="M 14 36 L 25 27 L 33 32 L 48 18" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 38 18 L 48 18 L 48 28" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Bottom bar: half green (#10b981), half red (#ef4444), no text -->
+              <g transform="translate(10, 48)">
+                <clipPath id="logoPill">
+                  <rect width="44" height="6" rx="3"/>
+                </clipPath>
+                <g clip-path="url(#logoPill)">
+                  <rect x="0" y="0" width="21.5" height="6" fill="#10b981"/>
+                  <rect x="22.5" y="0" width="21.5" height="6" fill="#ef4444"/>
+                </g>
+              </g>
             </svg>
           </div>
           <div class="brand-info">
@@ -306,18 +334,27 @@ function bindEvents(): void {
     }
   });
 
-  // PWA Install Button
+  // Install Button (Handles both iOS Safari & Android / Chrome PWA)
   const installBtn = document.getElementById('btn-install');
-  if (installBtn && deferredPrompt) {
-    installBtn.style.display = 'inline-flex';
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        await deferredPrompt.userChoice;
-        deferredPrompt = null;
-        installBtn.style.display = 'none';
-      }
-    });
+  if (installBtn) {
+    if (isIOS && !isStandalone) {
+      // iOS Safari user not in standalone home-screen mode
+      installBtn.style.display = 'inline-flex';
+      installBtn.textContent = '📲 Add to Home Screen';
+      installBtn.addEventListener('click', openIosModal);
+    } else if (deferredPrompt) {
+      // Chrome/Android PWA prompt
+      installBtn.style.display = 'inline-flex';
+      installBtn.textContent = '📲 Install App';
+      installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          installBtn.style.display = 'none';
+        }
+      });
+    }
   }
 
   // Stock Row Click (Accordion Toggle)
@@ -345,6 +382,7 @@ function bindEvents(): void {
   document.querySelectorAll('[data-inc]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       const id = (btn as HTMLElement).getAttribute('data-inc')!;
       const s = watchlist.find((x) => x.id === id);
       if (s) {
@@ -364,6 +402,7 @@ function bindEvents(): void {
   document.querySelectorAll('[data-dec]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       const id = (btn as HTMLElement).getAttribute('data-dec')!;
       const s = watchlist.find((x) => x.id === id);
       if (s && s.weight > 0) {
@@ -507,8 +546,9 @@ searchModal.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && searchModal.classList.contains('open')) {
-    closeModal();
+  if (e.key === 'Escape') {
+    if (searchModal.classList.contains('open')) closeModal();
+    if (iosInstallModal?.classList.contains('open')) closeIosModal();
   }
   if (
     (e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) &&
@@ -519,6 +559,26 @@ document.addEventListener('keydown', (e) => {
     openModal();
   }
 });
+
+// ===== iOS Install Modal Management =====
+function openIosModal(): void {
+  if (!iosInstallModal) return;
+  iosInstallModal.classList.add('open');
+  iosInstallModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeIosModal(): void {
+  if (!iosInstallModal) return;
+  iosInstallModal.classList.remove('open');
+  iosInstallModal.setAttribute('aria-hidden', 'true');
+}
+
+if (btnCloseIosModal) btnCloseIosModal.addEventListener('click', closeIosModal);
+if (iosInstallModal) {
+  iosInstallModal.addEventListener('click', (e) => {
+    if (e.target === iosInstallModal) closeIosModal();
+  });
+}
 
 // ===== Stock Addition Logic =====
 async function addStock(symbol: string, weight = 1, info?: Partial<StockInfo>): Promise<void> {
@@ -632,7 +692,10 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   const installBtn = document.getElementById('btn-install');
-  if (installBtn) installBtn.style.display = 'inline-flex';
+  if (installBtn && !isIOS) {
+    installBtn.style.display = 'inline-flex';
+    installBtn.textContent = '📲 Install App';
+  }
 });
 
 // ===== App Initialization =====

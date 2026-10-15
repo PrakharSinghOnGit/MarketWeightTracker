@@ -2,28 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0" />
+    <!-- Viewport: Disables double-tap zoom on iOS and enables safe-area-inset coverage -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light" />
     <meta name="description" content="Track live stock market breadth and weighted sentiment across your watchlist in real time." />
 
-    <!-- PWA & Mobile Web App Meta Tags -->
+    <!-- iOS Specific PWA & Web App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="MarketWeight" />
     <meta name="application-name" content="MarketWeight" />
-    <meta name="msapplication-TileColor" content="#ffffff" />
-    <meta name="msapplication-tap-highlight" content="no" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- App Icons -->
+    <!-- iOS Home Screen Icons (Solid background, crisp rendering) -->
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="./icons/apple-touch-icon-167.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="./icons/apple-touch-icon-152.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="./icons/apple-touch-icon-120.png" />
+
+    <!-- Standard Favicons & PWA Icons -->
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
-    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="./manifest.json" />
@@ -61,6 +67,44 @@
           </button>
         </div>
         <div id="modal-search-results" class="modal-results"></div>
+      </div>
+    </div>
+
+    <!-- iOS Install Guide Modal -->
+    <div id="ios-install-modal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-panel ios-sheet" role="dialog" aria-modal="true">
+        <div class="ios-sheet-header">
+          <div class="ios-sheet-title">Install on iPhone / iPad</div>
+          <button id="btn-close-ios-modal" class="modal-close-btn" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="ios-instructions">
+          <div class="ios-step">
+            <span class="ios-step-num">1</span>
+            <div class="ios-step-txt">
+              In Safari, tap the <strong>Share</strong> button
+              <svg class="ios-inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              in the bottom toolbar.
+            </div>
+          </div>
+          <div class="ios-step">
+            <span class="ios-step-num">2</span>
+            <div class="ios-step-txt">
+              Scroll down and tap <strong>Add to Home Screen</strong>
+              <svg class="ios-inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>.
+            </div>
+          </div>
+          <div class="ios-step">
+            <span class="ios-step-num">3</span>
+            <div class="ios-step-txt">
+              Tap <strong>Add</strong> in the top right. MarketWeight will appear as an app icon!
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

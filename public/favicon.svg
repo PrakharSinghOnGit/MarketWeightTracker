@@ -1,15 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <defs>
-    <linearGradient id="favBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="100%" stop-color="#8b5cf6"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="url(#favBg)"/>
-  <rect x="14" y="36" width="5" height="12" rx="1.5" fill="#34d399"/>
-  <rect x="23" y="28" width="5" height="20" rx="1.5" fill="#34d399"/>
-  <rect x="32" y="32" width="5" height="16" rx="1.5" fill="#f87171"/>
-  <rect x="41" y="22" width="5" height="26" rx="1.5" fill="#34d399"/>
-  <path d="M 14 38 Q 24 30 32 34 T 46 20" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="46" cy="20" r="2.5" fill="#ffffff"/>
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <path d="M 14 36 L 25 27 L 33 32 L 48 18" 
+        fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 38 18 L 48 18 L 48 28" 
+        fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(10, 48)">
+    <clipPath id="favClip">
+      <rect width="44" height="6" rx="3"/>
+    </clipPath>
+    <g clip-path="url(#favClip)">
+      <rect x="0" y="0" width="21.5" height="6" fill="#10b981"/>
+      <rect x="22.5" y="0" width="21.5" height="6" fill="#ef4444"/>
+    </g>
+  </g>
 </svg>
