@@ -678,14 +678,20 @@ function updateTimeBadges(): void {
   }
 }
 
-// ===== PWA Service Worker Registration =====
+// ===== Unregister Service Worker to prevent interference with iOS PWA icons =====
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('./sw.js')
-      .then((reg) => console.log('[PWA] ServiceWorker registered with scope:', reg.scope))
-      .catch((err) => console.warn('[PWA] ServiceWorker registration failed:', err));
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister().then(() => {
+        console.log('[PWA] ServiceWorker unregistered successfully');
+      });
+    }
   });
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      for (const key of keys) caches.delete(key);
+    });
+  }
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
