@@ -1,6 +1,6 @@
-# Stock Market Breadth & Weightage Tracker 📈
+# Market Breadth & Weight Tracker 📈
 
-A clean, fast, elder-friendly single-page React app to track live market breadth and weighted sentiment across your custom stock watchlist. Designed to run purely in the browser with zero backend, installable as a mobile PWA, and hosted for free on GitHub Pages.
+A clean, minimalist, white-theme web application with pastel colors to track live stock market breadth and weighted sentiment across your personal watchlist. Designed to run smoothly in any mobile or desktop browser, installable as a Progressive Web App (PWA), with persistent local memory and automated deployment via GitHub Pages.
 
 **🌐 Live Demo:** [https://prakharsinghongit.github.io/MarketWeightTracker/](https://prakharsinghongit.github.io/MarketWeightTracker/)
 
@@ -8,26 +8,38 @@ A clean, fast, elder-friendly single-page React app to track live market breadth
 
 ## ✨ Features
 
-- **👴 Elder-Friendly White UI:** High-contrast text, large readable fonts (18px–24px), comfortable 48px+ tap targets, and big `+` / `−` weight stepper buttons.
-- **🔍 Instant Live Search Autocomplete:** Type any company name or ticker (e.g., *Tata*, *Reliance*, *Apple*, *HDFC*, *Nvidia*), and get live suggestions with real-time prices and percentage changes as you type.
-- **📊 Real-Time Market Breadth Bar:** Prominent visual bar showing unweighted counts (e.g., 5 Up, 2 Down) and user-weighted percentage bullish/bearish sentiment with clear market mood badges (*"Market Strongly Bullish 🚀"*).
-- **⏱ Auto-Refresh Controls:** Choose between [Pause, 1 min, 5 min, 15 min] with a live countdown timer. Automatically pauses when the browser tab is hidden to save network calls.
-- **📱 PWA & Mobile-First:** Works cleanly on phones, desktop, or in a 350px Chrome Side Panel. Supports browser installation to iOS/Android home screens.
-- **💾 Data Persistence & Portability:**
-  - Automatically saves watchlist and weights to `localStorage`.
-  - **Share Setup:** One-click button encodes watchlist into a shareable URL hash. Opening the link prompts the recipient to import the watchlist.
-  - **Backup & Restore:** Download or upload watchlist as JSON.
-- **🚀 Zero Backend:** Runs 100% in the frontend with CORS-friendly, low-latency live financial data for Indian (NSE/BSE) and US (NASDAQ/NYSE/AMEX) markets.
+- **📊 Top Weighted Breadth Ratio Bar:**
+  - Displays the exact ratio of green (advancing) vs red (declining) stocks multiplied by their assigned weights.
+  - *Example:* With 4 stocks (2 up, 2 down) and 1 up stock given a weight of 3 (others weight 1), the bar displays **`4 : 2`** (66.7% Green vs 33.3% Red).
+  - Smooth animated pastel green and pastel red split bar.
+- **🔍 Watchlist Maker & Instant Search:**
+  - Search any ticker symbol or company name (e.g. `RELIANCE`, `TCS`, `INFY`, `HDFCBANK`, `AAPL`, `NVDA`).
+  - Real-time dropdown suggestions with live prices, percentage changes, and 1-click addition.
+  - Quick-add chips for popular Indian and global stocks.
+- **⚖️ Editable Numeric Weight:**
+  - Direct numeric input and convenient `+` / `−` steppers for each stock.
+  - Changes immediately update the top ratio bar in real time.
+- **🎨 Pastel & White Theme:**
+  - Crisp pure white background (`#ffffff`) with soft, calming pastel green (`#86efac`) and pastel red (`#fca5a5`) accents.
+  - Responsive design optimized for both smartphones and laptops.
+- **📱 PWA Compatible:**
+  - Offline-ready with Service Worker (`sw.js`).
+  - Web App Manifest (`manifest.json`) for standalone mobile installation.
+- **💾 Persistent Memory:**
+  - Watchlist and customized weights automatically persist to `localStorage`.
+  - Your watchlist is never lost when you leave and come back.
+  - Background live quote refresh on return.
+- **🚀 Automated Deployment:**
+  - GitHub Actions workflow (`.github/workflows/deploy.yml`) builds and deploys to GitHub Pages on every push.
 
 ---
 
 ## 🛠 Tech Stack
 
-- **React 19** (Functional components & Hooks)
-- **Vite** & **TypeScript**
-- **Tailwind CSS v4**
-- **Lucide React Icons**
-- **GitHub Actions & Pages** for CI/CD
+- **HTML5 & Vanilla TypeScript** (Fast, zero framework overhead, instant rendering)
+- **Vite** (Next-gen frontend tooling)
+- **CORS-Friendly Financial Scanner API** (Real-time live prices & changes for Indian & Global markets)
+- **GitHub Actions & GitHub Pages** for automated CI/CD
 
 ---
 
@@ -45,18 +57,26 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-Visit `http://localhost:5173/` in your browser.
+Visit `http://localhost:3000/` or the URL printed by Vite.
 
 ---
 
-## 📦 Building & Deployment
+## 📦 Building
 
 ```bash
-# Production build
+# Compile and bundle for production
 npm run build
 
-# Preview build locally
+# Preview production build locally
 npm run preview
 ```
 
-Every push to the `main` branch automatically builds and deploys the latest version to GitHub Pages via the included GitHub Actions workflow.
+---
+
+## 🚀 GitHub Pages Automation
+
+The included GitHub Actions workflow at [`.github/workflows/deploy.yml`](file:///.github/workflows/deploy.yml) automatically triggers on push to `main`:
+1. Checks out repository.
+2. Installs dependencies via `npm ci --legacy-peer-deps`.
+3. Runs `npm run build` to generate the `./dist` folder.
+4. Uploads and deploys the static files directly to GitHub Pages.

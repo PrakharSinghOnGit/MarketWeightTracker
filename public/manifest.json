@@ -1,13 +1,19 @@
 {
-  "name": "Stock Breadth Tracker",
-  "short_name": "BreadthTracker",
-  "description": "Track stock market breadth and weighted sentiment from your watchlist.",
+  "name": "Market Weight Tracker",
+  "short_name": "WeightTracker",
+  "description": "Simple, clean stock watchlist and weighted breadth ratio tracker.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "./icons/icon-192.png",
       "sizes": "192x192",

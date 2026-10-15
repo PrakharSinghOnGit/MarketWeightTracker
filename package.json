@@ -1,16 +1,19 @@
 {
   "name": "marketweighttracker",
-  "module": "index.ts",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "peerDependencies": {
-    "typescript": "^7"
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
   },
   "dependencies": {
-    "request": "^2.88.2",
-    "undici": "^8.11.2"
+    "yahoo-finance2": "^4.0.3"
   }
 }
