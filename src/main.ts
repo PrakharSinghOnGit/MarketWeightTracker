@@ -1,12 +1,11 @@
 import './style.css';
 import type { WatchlistStock, StockInfo } from './types';
 import { loadWatchlist, saveWatchlist, resetWatchlist, clearWatchlist } from './storage';
-import { calculateBreadth, formatPrice } from './utils';
-import { getStockSummaries, searchStock, formatPercent } from './api';
+import { calculateBreadth, formatPrice, formatTimeAgo } from './utils';
+import { getStockSummaries, searchStock } from './api';
 
 // ================= State =================
 let watchlist: WatchlistStock[] = loadWatchlist();
-let isSearching = false;
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let deferredPrompt: any = null;
 
@@ -17,15 +16,8 @@ const barGreenEl = document.getElementById('bar-green')!;
 const barRedEl = document.getElementById('bar-red')!;
 const barGreenText = document.getElementById('bar-green-text')!;
 const barRedText = document.getElementById('bar-red-text')!;
-const pillGreenText = document.getElementById('pill-green-text')!;
-const pillRedText = document.getElementById('pill-red-text')!;
-const pillTotalText = document.getElementById('pill-total-text')!;
 const stockListContainer = document.getElementById('stock-list-container')!;
 const emptyStateEl = document.getElementById('empty-state')!;
-const watchlistCountEl = document.getElementById('watchlist-count')!;
-const searchInput = document.getElementById('search-input') as HTMLInputElement;
-const searchDropdown = document.getElementById('search-dropdown')!;
-const btnAddSearch = document.getElementById('btn-add-search')!;
 const btnRefresh = document.getElementById('btn-refresh')!;
 const refreshText = document.getElementById('refresh-text')!;
 const btnResetSample = document.getElementById('btn-reset-sample')!;
@@ -33,10 +25,18 @@ const btnClearAll = document.getElementById('btn-clear-all')!;
 const btnInstallPwa = document.getElementById('btn-install-pwa')!;
 const lastSyncStatus = document.getElementById('last-sync-status')!;
 
+// Modal Elements
+const btnOpenSearch = document.getElementById('btn-open-search')!;
+const searchModal = document.getElementById('search-modal')!;
+const btnCloseModal = document.getElementById('btn-close-modal')!;
+const modalSearchInput = document.getElementById('modal-search-input') as HTMLInputElement;
+const btnClearSearch = document.getElementById('btn-clear-search')!;
+const modalSearchResults = document.getElementById('modal-search-results')!;
+
 // ================= Rendering Functions =================
 
 /**
- * Updates the Top Breadth Bar with weighted green vs red counts and percentages.
+ * Updates the Top Breadth Bar with weighted green vs red ratio.
  */
 function renderBreadthBar(): void {
   const stats = calculateBreadth(watchlist);
@@ -48,7 +48,6 @@ function renderBreadthBar(): void {
 
   if (total === 0) {
     if (watchlist.length > 0) {
-      // Stocks exist but all are flat (0.00% change)
       barGreenEl.style.width = '50%';
       barRedEl.style.width = '50%';
       barGreenText.textContent = '0';
@@ -75,15 +74,10 @@ function renderBreadthBar(): void {
     barGreenText.textContent = `${stats.greenPercentage}%`;
     barRedText.textContent = `${stats.redPercentage}%`;
   }
-
-  pillGreenText.textContent = `${stats.weightedGreen} Up (${stats.greenPercentage}%)`;
-  pillRedText.textContent = `${stats.weightedRed} Down (${stats.redPercentage}%)`;
-  pillTotalText.textContent = `${watchlist.length} Stocks (${total} Weighted)`;
-  watchlistCountEl.textContent = watchlist.length.toString();
 }
 
 /**
- * Renders the list of watchlist stocks with interactive weight steppers.
+ * Renders the watchlist items in clean separated columns.
  */
 function renderWatchlist(): void {
   renderBreadthBar();
@@ -103,9 +97,11 @@ function renderWatchlist(): void {
       const changeClass = isUp ? 'up' : isDown ? 'down' : 'neutral';
       const borderClass = isUp ? 'is-up' : isDown ? 'is-down' : 'is-neutral';
       const formattedPrice = formatPrice(stock.currentPrice, stock.currency);
+      const timeInfo = formatTimeAgo(stock.lastUpdated);
 
       return `
       <div class="stock-card ${borderClass}" data-id="${stock.id}">
+        <!-- Col 1: Symbol & Name -->
         <div class="stock-info">
           <div class="stock-symbol-row">
             <span class="stock-symbol">${escapeHtml(stock.symbol)}</span>
@@ -116,13 +112,30 @@ function renderWatchlist(): void {
           </div>
         </div>
 
+        <!-- Col 2: Current Price -->
         <div class="stock-price-col">
           <div class="stock-price">${formattedPrice}</div>
+        </div>
+
+        <!-- Col 3: Change -->
+        <div class="stock-change-col">
           <span class="stock-change ${changeClass}">${escapeHtml(stock.changePercent)}</span>
         </div>
 
+        <!-- Col 4: Last Updated Time Counter -->
+        <div class="stock-time-col">
+          <span class="time-counter-badge ${timeInfo.freshnessClass}" data-time-id="${stock.id}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7;">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span class="time-text">${timeInfo.text}</span>
+          </span>
+        </div>
+
+        <!-- Col 5: Weight Stepper -->
         <div class="stock-weight-col">
-          <span class="weight-label-tag">Weight:</span>
+          <span class="weight-label-tag">Wt:</span>
           <div class="weight-stepper">
             <button class="step-btn btn-dec" data-id="${stock.id}" title="Decrease weight">−</button>
             <input
@@ -138,6 +151,7 @@ function renderWatchlist(): void {
           </div>
         </div>
 
+        <!-- Col 6: Remove -->
         <button class="btn-remove" data-id="${stock.id}" title="Remove ${escapeHtml(stock.symbol)}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 6 6 18" />
@@ -150,6 +164,23 @@ function renderWatchlist(): void {
     .join('');
 
   attachWatchlistEventListeners();
+}
+
+/**
+ * Updates all time counter badges dynamically without re-rendering the whole list.
+ */
+function updateAllTimeBadges(): void {
+  for (const stock of watchlist) {
+    const badge = stockListContainer.querySelector(`[data-time-id="${stock.id}"]`);
+    if (badge) {
+      const timeInfo = formatTimeAgo(stock.lastUpdated);
+      const textSpan = badge.querySelector('.time-text');
+      if (textSpan) textSpan.textContent = timeInfo.text;
+
+      // Update freshness class
+      badge.className = `time-counter-badge ${timeInfo.freshnessClass}`;
+    }
+  }
 }
 
 /**
@@ -237,7 +268,7 @@ function saveAndSync(): void {
 // ================= Stock Search & Add Logic =================
 
 /**
- * Adds a stock to the watchlist.
+ * Adds a selected stock to the watchlist.
  */
 async function addStockToWatchlist(symbol: string, initialWeight = 1, knownInfo?: Partial<StockInfo>): Promise<void> {
   const cleanSym = symbol.trim().toUpperCase();
@@ -255,7 +286,7 @@ async function addStockToWatchlist(symbol: string, initialWeight = 1, knownInfo?
     return;
   }
 
-  // If known info is already provided (e.g. from search selection)
+  // If known info is already provided from search selection
   if (knownInfo && knownInfo.currentPrice !== undefined) {
     const newStock: WatchlistStock = {
       id: cleanSym,
@@ -302,7 +333,7 @@ async function addStockToWatchlist(symbol: string, initialWeight = 1, knownInfo?
 }
 
 /**
- * Highlights a stock card when user tries to re-add it.
+ * Highlights a stock card when user re-adds or interacts with it.
  */
 function highlightExistingStock(id: string): void {
   const card = stockListContainer.querySelector(`[data-id="${id}"]`) as HTMLElement;
@@ -316,38 +347,61 @@ function highlightExistingStock(id: string): void {
   }
 }
 
-/**
- * Handles debounced search as user types in search input.
- */
-function handleSearchInput(): void {
-  const query = searchInput.value.trim();
+// ================= Modal Logic =================
+
+function openSearchModal(): void {
+  searchModal.classList.add('open');
+  searchModal.setAttribute('aria-hidden', 'false');
+  modalSearchInput.value = '';
+  modalSearchResults.innerHTML = `
+    <div class="search-hint-message">
+      Type a company name or ticker symbol to search...
+    </div>
+  `;
+  setTimeout(() => {
+    modalSearchInput.focus();
+  }, 100);
+}
+
+function closeSearchModal(): void {
+  searchModal.classList.remove('open');
+  searchModal.setAttribute('aria-hidden', 'true');
+  modalSearchInput.value = '';
+}
+
+function handleModalSearchInput(): void {
+  const query = modalSearchInput.value.trim();
 
   if (searchDebounceTimer) {
     clearTimeout(searchDebounceTimer);
   }
 
   if (query.length < 1) {
-    searchDropdown.classList.remove('active');
-    searchDropdown.innerHTML = '';
+    modalSearchResults.innerHTML = `
+      <div class="search-hint-message">
+        Type a company name or ticker symbol to search...
+      </div>
+    `;
     return;
   }
 
+  modalSearchResults.innerHTML = `
+    <div class="search-hint-message">Searching...</div>
+  `;
+
   searchDebounceTimer = setTimeout(async () => {
-    isSearching = true;
     const results = await searchStock(query);
-    isSearching = false;
 
     if (results.length === 0) {
-      searchDropdown.innerHTML = `
-        <div style="padding: 12px 16px; font-size: 0.8125rem; color: var(--text-muted); text-align: center;">
-          No matching stocks found. Press <strong>Add Ticker</strong> to add anyway.
+      modalSearchResults.innerHTML = `
+        <div class="search-hint-message">
+          No matching stocks found for "<strong>${escapeHtml(query)}</strong>".
         </div>
       `;
-      searchDropdown.classList.add('active');
       return;
     }
 
-    searchDropdown.innerHTML = results
+    modalSearchResults.innerHTML = results
       .map((r) => {
         const isUp = r.rawPercent > 0;
         const isDown = r.rawPercent < 0;
@@ -375,10 +429,8 @@ function handleSearchInput(): void {
       })
       .join('');
 
-    searchDropdown.classList.add('active');
-
     // Attach click events on dropdown items
-    searchDropdown.querySelectorAll('.search-result-item').forEach((item) => {
+    modalSearchResults.querySelectorAll('.search-result-item').forEach((item) => {
       item.addEventListener('click', () => {
         const sym = item.getAttribute('data-sym')!;
         const fullName = item.getAttribute('data-name')!;
@@ -398,15 +450,14 @@ function handleSearchInput(): void {
           exchange,
         });
 
-        searchInput.value = '';
-        searchDropdown.classList.remove('active');
+        closeSearchModal();
       });
     });
   }, 220);
 }
 
 /**
- * Refreshes all quotes in the watchlist with live market data.
+ * Refreshes all quotes in the watchlist with live market data and updates timestamps.
  */
 async function refreshAllQuotes(): Promise<void> {
   if (watchlist.length === 0) return;
@@ -423,6 +474,7 @@ async function refreshAllQuotes(): Promise<void> {
       dataMap.set(d.symbol.toUpperCase(), d);
     }
 
+    const now = Date.now();
     watchlist = watchlist.map((stock) => {
       const fresh = dataMap.get(stock.symbol.toUpperCase());
       if (fresh) {
@@ -434,7 +486,7 @@ async function refreshAllQuotes(): Promise<void> {
           rawPercent: fresh.rawPercent,
           currency: fresh.currency || stock.currency,
           exchange: fresh.exchange || stock.exchange,
-          lastUpdated: Date.now(),
+          lastUpdated: now,
         };
       }
       return stock;
@@ -454,46 +506,30 @@ async function refreshAllQuotes(): Promise<void> {
 
 // ================= Event Listeners =================
 
-// Search input events
-searchInput.addEventListener('input', handleSearchInput);
-searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const val = searchInput.value.trim();
-    if (val) {
-      addStockToWatchlist(val);
-      searchInput.value = '';
-      searchDropdown.classList.remove('active');
-    }
-  } else if (e.key === 'Escape') {
-    searchDropdown.classList.remove('active');
+// Modal open/close listeners
+btnOpenSearch.addEventListener('click', openSearchModal);
+btnCloseModal.addEventListener('click', closeSearchModal);
+
+btnClearSearch.addEventListener('click', () => {
+  modalSearchInput.value = '';
+  modalSearchInput.focus();
+  handleModalSearchInput();
+});
+
+modalSearchInput.addEventListener('input', handleModalSearchInput);
+
+// Close modal on backdrop click
+searchModal.addEventListener('click', (e) => {
+  if (e.target === searchModal) {
+    closeSearchModal();
   }
 });
 
-btnAddSearch.addEventListener('click', () => {
-  const val = searchInput.value.trim();
-  if (val) {
-    addStockToWatchlist(val);
-    searchInput.value = '';
-    searchDropdown.classList.remove('active');
+// ESC key closes modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && searchModal.classList.contains('open')) {
+    closeSearchModal();
   }
-});
-
-// Close dropdown on outside click
-document.addEventListener('click', (e) => {
-  if (!searchDropdown.contains(e.target as Node) && e.target !== searchInput) {
-    searchDropdown.classList.remove('active');
-  }
-});
-
-// Quick add chips
-document.querySelectorAll('.chip-btn').forEach((btn) => {
-  btn.addEventListener('click', (e) => {
-    const sym = (e.currentTarget as HTMLElement).getAttribute('data-sym');
-    if (sym) {
-      addStockToWatchlist(sym);
-    }
-  });
 });
 
 // Header Refresh button
@@ -563,6 +599,11 @@ function escapeHtml(str: string): string {
 
 // ================= Initialization =================
 renderWatchlist();
+
+// Live ticker for time counter badges every 5 seconds
+setInterval(() => {
+  updateAllTimeBadges();
+}, 5000);
 
 // Background initial refresh of quotes if watchlist exists
 if (watchlist.length > 0) {

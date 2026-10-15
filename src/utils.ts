@@ -69,3 +69,42 @@ export function formatPrice(price: number, currency: string = 'INR'): string {
     maximumFractionDigits: 2,
   })}`;
 }
+
+/**
+ * Formats elapsed time since last stock update.
+ * Smart formatting in seconds, minutes, hours, days.
+ * Returns a freshness class that progressively transitions to red as time increases.
+ */
+export function formatTimeAgo(timestamp?: number): { text: string; freshnessClass: string } {
+  if (!timestamp || isNaN(timestamp)) {
+    return { text: 'never', freshnessClass: 'freshness-old' };
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+
+  if (elapsedSeconds < 5) {
+    return { text: 'just now', freshnessClass: 'freshness-fresh' };
+  }
+  if (elapsedSeconds < 60) {
+    return { text: `${elapsedSeconds}s ago`, freshnessClass: 'freshness-fresh' };
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 5) {
+    return { text: `${elapsedMinutes}m ago`, freshnessClass: 'freshness-recent' };
+  }
+  if (elapsedMinutes < 30) {
+    return { text: `${elapsedMinutes}m ago`, freshnessClass: 'freshness-warm' };
+  }
+  if (elapsedMinutes < 60) {
+    return { text: `${elapsedMinutes}m ago`, freshnessClass: 'freshness-stale' };
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return { text: `${elapsedHours}h ago`, freshnessClass: 'freshness-stale' };
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return { text: `${elapsedDays}d ago`, freshnessClass: 'freshness-old' };
+}

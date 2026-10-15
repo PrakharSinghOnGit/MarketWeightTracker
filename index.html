@@ -31,6 +31,16 @@
         </div>
 
         <div class="header-actions">
+          <!-- Search / Add Stock Icon Button -->
+          <button id="btn-open-search" class="btn-icon" title="Search & Add Stock">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <span>Add Stock</span>
+          </button>
+
+          <!-- Refresh Quotes Button -->
           <button id="btn-refresh" class="btn-icon" title="Refresh live quotes">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -43,7 +53,7 @@
         </div>
       </header>
 
-      <!-- Sticky / Top Breadth Bar Card -->
+      <!-- Top Breadth Bar Card -->
       <section class="breadth-card" aria-label="Market Breadth Ratio">
         <div class="breadth-header">
           <div class="ratio-display-wrap">
@@ -68,68 +78,6 @@
             <span id="bar-red-text">50%</span>
           </div>
         </div>
-
-        <!-- Pill Stats -->
-        <div class="breadth-pill-stats">
-          <div class="pill-stat green" id="pill-green">
-            <span class="pill-dot green"></span>
-            <span id="pill-green-text">0 Green</span>
-          </div>
-          <div class="pill-stat red" id="pill-red">
-            <span class="pill-dot red"></span>
-            <span id="pill-red-text">0 Red</span>
-          </div>
-          <div class="pill-stat neutral" id="pill-total">
-            <span id="pill-total-text">0 Stocks</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Watchlist Maker & Search Section -->
-      <section class="maker-card">
-        <div class="section-title-wrap">
-          <h2 class="section-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            Add Stock to Watchlist
-          </h2>
-          <span class="sync-status" id="last-sync-status">All memory saved</span>
-        </div>
-
-        <div class="search-form-wrap">
-          <div class="search-input-box">
-            <span class="search-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              id="search-input"
-              class="search-input"
-              placeholder="Search ticker or name (e.g. RELIANCE, TCS, AAPL, NVDA)..."
-              autocomplete="off"
-            />
-            <button id="btn-add-search" class="btn-add-primary">Add Ticker</button>
-          </div>
-
-          <!-- Instant Search Dropdown -->
-          <div id="search-dropdown" class="search-dropdown"></div>
-        </div>
-
-        <!-- Quick Add Suggestions -->
-        <div class="quick-add-wrap">
-          <span class="quick-label">Quick add:</span>
-          <button class="chip-btn" data-sym="RELIANCE.NS">+ RELIANCE</button>
-          <button class="chip-btn" data-sym="TCS.NS">+ TCS</button>
-          <button class="chip-btn" data-sym="INFY.NS">+ INFY</button>
-          <button class="chip-btn" data-sym="HDFCBANK.NS">+ HDFC</button>
-          <button class="chip-btn" data-sym="AAPL">+ AAPL</button>
-          <button class="chip-btn" data-sym="NVDA">+ NVDA</button>
-        </div>
       </section>
 
       <!-- Watchlist Items -->
@@ -137,8 +85,8 @@
         <div class="watchlist-header-bar">
           <h2 class="section-title">
             Your Watchlist
-            <span class="count-badge" id="watchlist-count">0</span>
           </h2>
+          <span class="sync-status" id="last-sync-status">All memory saved</span>
         </div>
 
         <div id="stock-list-container" class="stock-list">
@@ -153,7 +101,7 @@
             <line x1="9" x2="11" y1="17" y2="17" />
           </svg>
           <p>Your watchlist is empty.</p>
-          <p style="font-size: 0.8125rem; margin-top: 4px;">Use the search bar above or click a quick suggestion to add stocks.</p>
+          <p style="font-size: 0.8125rem; margin-top: 6px;">Click <strong>Add Stock</strong> above to search and add companies.</p>
         </div>
 
         <div class="watchlist-footer-actions">
@@ -169,6 +117,52 @@
           </div>
         </div>
       </section>
+    </div>
+
+    <!-- Search & Add Stock Modal -->
+    <div id="search-modal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <h3 class="modal-title">Search & Add Stock</h3>
+          </div>
+          <button id="btn-close-modal" class="btn-close-modal" title="Close (Esc)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-search-box">
+          <span class="modal-search-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </span>
+          <input
+            type="text"
+            id="modal-search-input"
+            class="modal-search-input"
+            placeholder="Type ticker or name (e.g. RELIANCE, TCS, AAPL)..."
+            autocomplete="off"
+          />
+          <button id="btn-clear-search" class="btn-clear-search" title="Clear">
+            &times;
+          </button>
+        </div>
+
+        <div id="modal-search-results" class="modal-results-list">
+          <div class="search-hint-message">
+            Type a company name or ticker to search across NSE, BSE, and US exchanges.
+          </div>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="./src/main.ts"></script>
