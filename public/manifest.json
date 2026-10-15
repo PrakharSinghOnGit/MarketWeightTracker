@@ -24,7 +24,7 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/touch-icon.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/apple-touch-icon.png?v=3",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
@@ -52,12 +52,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ],
   "screenshots": [
