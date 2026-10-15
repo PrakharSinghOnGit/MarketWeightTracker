@@ -1,10 +1,10 @@
 {
-  "id": "./",
+  "id": "/MarketWeightTracker/",
   "name": "Market Weight Tracker",
   "short_name": "MarketWeight",
   "description": "Real-time stock market breadth and weighted sentiment tracker",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "https://prakharsinghongit.github.io/MarketWeightTracker/",
+  "scope": "https://prakharsinghongit.github.io/MarketWeightTracker/",
   "display": "standalone",
   "display_override": [
     "standalone",
@@ -24,31 +24,37 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "./icons/icon-192.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-v2.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-512.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-maskable-192.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/icon-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./icons/icon-maskable-512.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./favicon.svg",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -56,14 +62,14 @@
   ],
   "screenshots": [
     {
-      "src": "./icons/screenshot-mobile.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/screenshot-mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Mobile Watchlist with Weighted Breadth Ratio"
     },
     {
-      "src": "./icons/screenshot-desktop.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/screenshot-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
@@ -75,10 +81,10 @@
       "name": "Add Stock",
       "short_name": "Add",
       "description": "Quickly search and add a stock to your watchlist",
-      "url": "./?action=search",
+      "url": "https://prakharsinghongit.github.io/MarketWeightTracker/?action=search",
       "icons": [
         {
-          "src": "./icons/icon-192.png",
+          "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/icon-192.png",
           "sizes": "192x192"
         }
       ]

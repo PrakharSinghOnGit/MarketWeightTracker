@@ -19,17 +19,34 @@
     <meta name="application-name" content="MarketWeight" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- iOS Home Screen Icons (Solid background, crisp rendering) -->
-    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="./icons/apple-touch-icon-167.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="./icons/apple-touch-icon-152.png" />
-    <link rel="apple-touch-icon" sizes="120x120" href="./icons/apple-touch-icon-120.png" />
+    <!-- iOS Home Screen Icons (Full Absolute URLs to ensure iOS background Web Clip daemon resolves correctly) -->
+    <link rel="apple-touch-icon" href="https://prakharsinghongit.github.io/MarketWeightTracker/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-v2.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-167.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-152.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-120.png" />
+
+    <!-- Precomposed Fallbacks (Required by older / strict WebKit daemons) -->
+    <link rel="apple-touch-icon-precomposed" href="https://prakharsinghongit.github.io/MarketWeightTracker/apple-touch-icon-precomposed.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-v2.png" />
+
+    <!-- Subdirectory & Relative Fallbacks -->
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v2.png" />
 
     <!-- Standard Favicons & PWA Icons -->
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
+
+    <!-- Open Graph (Used by iOS Safari Share Sheet Preview) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Market Weight Tracker" />
+    <meta property="og:description" content="Track live stock market breadth and weighted sentiment across your watchlist in real time." />
+    <meta property="og:url" content="https://prakharsinghongit.github.io/MarketWeightTracker/" />
+    <meta property="og:image" content="https://prakharsinghongit.github.io/MarketWeightTracker/icons/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="./manifest.json" />
