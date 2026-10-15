@@ -1,13 +1,15 @@
-const CACHE_NAME = 'market-weight-tracker-v5';
+const CACHE_NAME = 'market-weight-tracker-v6';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './favicon.svg',
+  './touch-icon.png',
   './apple-touch-icon.png',
   './apple-touch-icon-precomposed.png',
   './apple-touch-icon-180x180.png',
   './apple-touch-icon-180x180-precomposed.png',
+  './icons/touch-icon.png',
   './icons/apple-touch-icon.png',
   './icons/apple-touch-icon-v2.png',
   './icons/apple-touch-icon-precomposed.png',

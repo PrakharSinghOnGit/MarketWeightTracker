@@ -24,7 +24,7 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/icons/apple-touch-icon-v2.png",
+      "src": "https://prakharsinghongit.github.io/MarketWeightTracker/touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
