@@ -1,11 +1,15 @@
-const CACHE_NAME = 'market-weight-tracker-v1';
+const CACHE_NAME = 'market-weight-tracker-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './favicon.svg',
   './icons/icon-192.png',
+  './icons/icon-maskable-192.png',
   './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
+  './icons/screenshot-mobile.png',
+  './icons/screenshot-desktop.png',
 ];
 
 self.addEventListener('install', (event) => {

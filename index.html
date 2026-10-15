@@ -3,14 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0" />
     <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Track live stock market breadth and weighted sentiment across your watchlist." />
+
+    <!-- Standard PWA & Web App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="WeightTracker" />
+    <meta name="apple-mobile-web-app-title" content="MarketWeight" />
+    <meta name="application-name" content="MarketWeight" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Apple Touch Icons for iOS home screen -->
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
+
+    <!-- Web App Manifest -->
     <link rel="manifest" href="./manifest.json" />
+
     <title>Market Breadth & Weight Tracker</title>
   </head>
   <body>
@@ -19,12 +34,12 @@
       <header class="app-header">
         <div class="brand">
           <div class="brand-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 3v18h18" />
               <path d="m19 9-5 5-4-4-3 3" />
             </svg>
           </div>
-          <div>
+          <div class="brand-text">
             <h1 class="brand-title">Market Weight Tracker</h1>
             <p class="brand-subtitle">Weighted stock breadth & sentiment</p>
           </div>
@@ -32,23 +47,23 @@
 
         <div class="header-actions">
           <!-- Search / Add Stock Icon Button -->
-          <button id="btn-open-search" class="btn-icon" title="Search & Add Stock">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <button id="btn-open-search" class="btn-icon" title="Search & Add Stock" aria-label="Add Stock">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <span>Add Stock</span>
+            <span class="btn-text">Add Stock</span>
           </button>
 
           <!-- Refresh Quotes Button -->
-          <button id="btn-refresh" class="btn-icon" title="Refresh live quotes">
+          <button id="btn-refresh" class="btn-icon" title="Refresh live quotes" aria-label="Refresh quotes">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
               <path d="M3 3v5h5" />
               <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
               <path d="M16 21h5v-5" />
             </svg>
-            <span id="refresh-text">Refresh</span>
+            <span id="refresh-text" class="btn-text">Refresh</span>
           </button>
         </div>
       </header>
@@ -80,7 +95,7 @@
         </div>
       </section>
 
-      <!-- Watchlist Items -->
+      <!-- Watchlist Section -->
       <section class="watchlist-section">
         <div class="watchlist-header-bar">
           <h2 class="section-title">
@@ -100,8 +115,8 @@
             <line x1="9" x2="15" y1="13" y2="13" />
             <line x1="9" x2="11" y1="17" y2="17" />
           </svg>
-          <p>Your watchlist is empty.</p>
-          <p style="font-size: 0.8125rem; margin-top: 6px;">Click <strong>Add Stock</strong> above to search and add companies.</p>
+          <p style="font-weight: 600;">Your watchlist is empty.</p>
+          <p style="font-size: 0.8125rem; margin-top: 6px; color: var(--text-light);">Tap <strong>Add Stock</strong> above to search and add companies.</p>
         </div>
 
         <div class="watchlist-footer-actions">
@@ -111,7 +126,7 @@
             <button id="btn-clear-all" class="text-btn danger">Clear Watchlist</button>
           </div>
           <div>
-            <button id="btn-install-pwa" class="text-btn" style="display: none;">
+            <button id="btn-install-pwa" class="text-btn install-btn" style="display: none;">
               📲 Install App
             </button>
           </div>
@@ -130,7 +145,7 @@
             </svg>
             <h3 class="modal-title">Search & Add Stock</h3>
           </div>
-          <button id="btn-close-modal" class="btn-close-modal" title="Close (Esc)">
+          <button id="btn-close-modal" class="btn-close-modal" title="Close (Esc)" aria-label="Close modal">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 6 6 18" />
               <path d="m6 6 12 12" />
@@ -149,10 +164,11 @@
             type="text"
             id="modal-search-input"
             class="modal-search-input"
-            placeholder="Type ticker or name (e.g. RELIANCE, TCS, AAPL)..."
+            placeholder="Search ticker or name (e.g. RELIANCE, TCS, AAPL)..."
             autocomplete="off"
+            autocapitalize="characters"
           />
-          <button id="btn-clear-search" class="btn-clear-search" title="Clear">
+          <button id="btn-clear-search" class="btn-clear-search" title="Clear search">
             &times;
           </button>
         </div>

@@ -77,7 +77,7 @@ function renderBreadthBar(): void {
 }
 
 /**
- * Renders the watchlist items in clean separated columns.
+ * Renders the watchlist items in an un-squeezed, spacious 2-row card layout.
  */
 function renderWatchlist(): void {
   renderBreadthBar();
@@ -95,69 +95,65 @@ function renderWatchlist(): void {
       const isUp = stock.rawPercent > 0;
       const isDown = stock.rawPercent < 0;
       const changeClass = isUp ? 'up' : isDown ? 'down' : 'neutral';
-      const borderClass = isUp ? 'is-up' : isDown ? 'is-down' : 'is-neutral';
+      const indicatorClass = isUp ? 'is-up' : isDown ? 'is-down' : 'is-neutral';
       const formattedPrice = formatPrice(stock.currentPrice, stock.currency);
       const timeInfo = formatTimeAgo(stock.lastUpdated);
 
       return `
-      <div class="stock-card ${borderClass}" data-id="${stock.id}">
-        <!-- Col 1: Symbol & Name -->
-        <div class="stock-info">
-          <div class="stock-symbol-row">
-            <span class="stock-symbol">${escapeHtml(stock.symbol)}</span>
-            ${stock.exchange ? `<span class="stock-badge">${escapeHtml(stock.exchange)}</span>` : ''}
+      <div class="stock-card" data-id="${stock.id}">
+        <!-- Straight vertical indicator strip that stretches 100% of the card height -->
+        <div class="card-indicator ${indicatorClass}"></div>
+
+        <div class="card-body">
+          <!-- Row 1: Symbol & Exchange on the Left | Price & Change Pill on the Right -->
+          <div class="card-row-top">
+            <div class="symbol-group">
+              <span class="stock-symbol">${escapeHtml(stock.symbol)}</span>
+              ${stock.exchange ? `<span class="stock-badge">${escapeHtml(stock.exchange)}</span>` : ''}
+            </div>
+            <div class="price-change-group">
+              <span class="stock-price">${formattedPrice}</span>
+              <span class="stock-change ${changeClass}">${escapeHtml(stock.changePercent)}</span>
+            </div>
           </div>
-          <div class="stock-name" title="${escapeHtml(stock.fullName)}">
-            ${escapeHtml(stock.fullName || stock.symbol)}
+
+          <!-- Row 2: Company Name + Time ago on the Left | Weight Stepper & Delete on the Right -->
+          <div class="card-row-bottom">
+            <div class="meta-group">
+              <span class="stock-name" title="${escapeHtml(stock.fullName)}">${escapeHtml(stock.fullName || stock.symbol)}</span>
+              <span class="meta-divider">•</span>
+              <span class="time-counter-badge ${timeInfo.freshnessClass}" data-time-id="${stock.id}">
+                <span class="time-dot"></span>
+                <span class="time-text">${timeInfo.text}</span>
+              </span>
+            </div>
+            <div class="actions-group">
+              <div class="weight-control">
+                <span class="weight-label">WT</span>
+                <div class="weight-stepper">
+                  <button class="step-btn btn-dec" data-id="${stock.id}" title="Decrease weight">−</button>
+                  <input
+                    type="number"
+                    class="weight-input"
+                    data-id="${stock.id}"
+                    value="${stock.weight}"
+                    min="0"
+                    step="1"
+                    aria-label="Weight for ${escapeHtml(stock.symbol)}"
+                  />
+                  <button class="step-btn btn-inc" data-id="${stock.id}" title="Increase weight">+</button>
+                </div>
+              </div>
+
+              <button class="btn-remove" data-id="${stock.id}" title="Remove ${escapeHtml(stock.symbol)}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-
-        <!-- Col 2: Current Price -->
-        <div class="stock-price-col">
-          <div class="stock-price">${formattedPrice}</div>
-        </div>
-
-        <!-- Col 3: Change -->
-        <div class="stock-change-col">
-          <span class="stock-change ${changeClass}">${escapeHtml(stock.changePercent)}</span>
-        </div>
-
-        <!-- Col 4: Last Updated Time Counter -->
-        <div class="stock-time-col">
-          <span class="time-counter-badge ${timeInfo.freshnessClass}" data-time-id="${stock.id}">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7;">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span class="time-text">${timeInfo.text}</span>
-          </span>
-        </div>
-
-        <!-- Col 5: Weight Stepper -->
-        <div class="stock-weight-col">
-          <span class="weight-label-tag">Wt:</span>
-          <div class="weight-stepper">
-            <button class="step-btn btn-dec" data-id="${stock.id}" title="Decrease weight">−</button>
-            <input
-              type="number"
-              class="weight-input"
-              data-id="${stock.id}"
-              value="${stock.weight}"
-              min="0"
-              step="1"
-              aria-label="Weight for ${escapeHtml(stock.symbol)}"
-            />
-            <button class="step-btn btn-inc" data-id="${stock.id}" title="Increase weight">+</button>
-          </div>
-        </div>
-
-        <!-- Col 6: Remove -->
-        <button class="btn-remove" data-id="${stock.id}" title="Remove ${escapeHtml(stock.symbol)}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
-        </button>
       </div>
     `;
     })
@@ -176,8 +172,6 @@ function updateAllTimeBadges(): void {
       const timeInfo = formatTimeAgo(stock.lastUpdated);
       const textSpan = badge.querySelector('.time-text');
       if (textSpan) textSpan.textContent = timeInfo.text;
-
-      // Update freshness class
       badge.className = `time-counter-badge ${timeInfo.freshnessClass}`;
     }
   }
@@ -583,6 +577,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
         btnInstallPwa.style.display = 'none';
       }
     });
+  }
+});
+
+// Check if launched from PWA shortcut (e.g. ?action=search)
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('action') === 'search') {
+    setTimeout(openSearchModal, 400);
   }
 });
 

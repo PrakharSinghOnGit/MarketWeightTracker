@@ -1,12 +1,27 @@
 {
+  "id": "./",
   "name": "Market Weight Tracker",
-  "short_name": "WeightTracker",
-  "description": "Simple, clean stock watchlist and weighted breadth ratio tracker.",
+  "short_name": "MarketWeight",
+  "description": "Real-time stock market breadth and weighted sentiment tracker",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "window-controls-overlay"
+  ],
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "categories": [
+    "finance",
+    "business",
+    "utilities"
+  ],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "./favicon.svg",
@@ -18,13 +33,55 @@
       "src": "./icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "./icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./icons/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Watchlist with Weighted Breadth Ratio"
+    },
+    {
+      "src": "./icons/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Watchlist with Market Breadth Visualizer"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Stock",
+      "short_name": "Add",
+      "description": "Quickly search and add a stock to your watchlist",
+      "url": "./?action=search",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
