@@ -31,7 +31,7 @@ const btnCloseIosModal = document.getElementById('btn-close-ios-modal')!;
 document.addEventListener(
   'dblclick',
   (e) => {
-    if ((e.target as HTMLElement).closest('.step-btn, .weight-stepper, .stock-card, button, input')) {
+    if ((e.target as HTMLElement).closest('.stock-card, button, input')) {
       e.preventDefault();
     }
   },
@@ -69,7 +69,7 @@ function saveAndSync(): void {
 // ===== Breadth Bar Calculator =====
 function getBreadthDetails() {
   const stats = calculateBreadth(watchlist);
-  const total = stats.weightedGreen + stats.weightedRed;
+  const total = stats.greenCount + stats.redCount;
 
   let greenBar = 50;
   let redBar = 50;
@@ -79,14 +79,14 @@ function getBreadthDetails() {
   if (total > 0) {
     greenBar = stats.greenPercentage;
     redBar = stats.redPercentage;
-    if (stats.weightedGreen > stats.weightedRed) {
+    if (stats.greenCount > stats.redCount) {
       sentimentText = `Bullish (${greenBar}%)`;
       sentimentClass = 'bullish';
-    } else if (stats.weightedRed > stats.weightedGreen) {
+    } else if (stats.redCount > stats.greenCount) {
       sentimentText = `Bearish (${redBar}%)`;
       sentimentClass = 'bearish';
     } else {
-      sentimentText = 'Balanced';
+      sentimentText = 'Balanced (50%)';
       sentimentClass = 'neutral';
     }
   } else if (watchlist.length === 0) {
@@ -110,8 +110,8 @@ function syncBreadthUI(): void {
   const pillEl = document.getElementById('breadth-sentiment-pill');
   const pctSumEl = document.getElementById('breadth-pct-sum');
 
-  if (greenValEl) greenValEl.textContent = stats.weightedGreen.toString();
-  if (redValEl) redValEl.textContent = stats.weightedRed.toString();
+  if (greenValEl) greenValEl.textContent = stats.greenCount.toString();
+  if (redValEl) redValEl.textContent = stats.redCount.toString();
   if (barGreenEl) barGreenEl.style.width = `${total > 0 ? greenBar : 50}%`;
   if (barRedEl) barRedEl.style.width = `${total > 0 ? redBar : 50}%`;
   if (pillEl) {
@@ -159,7 +159,6 @@ function render(): void {
               <div class="stock-title-line">
                 <span class="stock-ticker">${esc(s.symbol)}</span>
                 ${s.exchange ? `<span class="stock-exchange">${esc(s.exchange)}</span>` : ''}
-                <span class="stock-weight-badge" data-badge-for="${s.id}">${s.weight}× wt</span>
               </div>
               <div class="stock-name" title="${esc(s.fullName)}">${esc(s.fullName)}</div>
             </div>
@@ -175,23 +174,12 @@ function render(): void {
 
           <div class="stock-drawer" data-drawer-for="${s.id}">
             <div class="drawer-content">
-              <div class="drawer-left">
-                <div class="weight-control-group">
-                  <span class="drawer-label">Weight</span>
-                  <div class="weight-stepper">
-                    <button class="step-btn" data-dec="${s.id}" title="Decrease weight" aria-label="Decrease weight">−</button>
-                    <input type="number" class="weight-input" data-weight="${s.id}" value="${s.weight}" min="0" max="999" step="1" inputmode="numeric" aria-label="Stock weight" />
-                    <button class="step-btn" data-inc="${s.id}" title="Increase weight" aria-label="Increase weight">+</button>
-                  </div>
-                </div>
-
-                <div class="time-badge ${timeInfo.freshnessClass}" data-time-id="${s.id}" title="Time elapsed since last quote update">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                  <span class="time-text">${timeInfo.text}</span>
-                </div>
+              <div class="time-badge ${timeInfo.freshnessClass}" data-time-id="${s.id}" title="Time elapsed since last quote update">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="time-text">${timeInfo.text}</span>
               </div>
 
               <button class="btn-remove" data-del="${s.id}" title="Remove stock from watchlist" aria-label="Remove stock">
@@ -231,8 +219,8 @@ function render(): void {
             </svg>
           </div>
           <div class="brand-info">
-            <h1 class="brand-title">Market Weight Tracker</h1>
-            <p class="brand-subtitle">Live weighted breadth &amp; sentiment</p>
+            <h1 class="brand-title">Market Breadth Tracker</h1>
+            <p class="brand-subtitle">Live stock breadth &amp; sentiment</p>
           </div>
         </div>
       </header>
@@ -244,7 +232,7 @@ function render(): void {
             <circle cx="11" cy="11" r="8"/>
             <path d="m21 21-4.3-4.3"/>
           </svg>
-          <span class="search-placeholder">Search stocks (e.g. Reliance, TCS, AAPL)...</span>
+          <span class="search-placeholder">Search stocks (e.g. Tata Steel, Adani, Reliance)...</span>
           <kbd class="search-kbd">/</kbd>
         </div>
         <button class="btn-refresh" id="btn-refresh" title="Refresh live quotes" aria-label="Refresh quotes">
@@ -262,14 +250,14 @@ function render(): void {
         <div class="breadth-top">
           <div class="breadth-left">
             <div class="breadth-title-row">
-              <span class="breadth-tag">Weighted Breadth</span>
+              <span class="breadth-tag">Market Breadth</span>
               <span class="breadth-sentiment-pill ${sentimentClass}" id="breadth-sentiment-pill">${sentimentText}</span>
             </div>
             <div class="breadth-ratio-row">
-              <span class="ratio-val green" id="green-ratio-val">${stats.weightedGreen}</span>
+              <span class="ratio-val green" id="green-ratio-val">${stats.greenCount}</span>
               <span class="ratio-label-sm">Up</span>
               <span class="ratio-divider">:</span>
-              <span class="ratio-val red" id="red-ratio-val">${stats.weightedRed}</span>
+              <span class="ratio-val red" id="red-ratio-val">${stats.redCount}</span>
               <span class="ratio-label-sm">Down</span>
             </div>
           </div>
@@ -297,7 +285,7 @@ function render(): void {
 
       <!-- Footer Actions -->
       <div class="footer-actions">
-        <button class="footer-btn" id="btn-reset">Restore Sample</button>
+        <button class="footer-btn" id="btn-reset">Restore Default</button>
         <span class="footer-sep">|</span>
         <button class="footer-btn danger" id="btn-clear">Clear Watchlist</button>
         <button class="install-btn" id="btn-install">📲 Install App</button>
@@ -317,7 +305,7 @@ function bindEvents(): void {
 
   // Restore Default Sample
   document.getElementById('btn-reset')?.addEventListener('click', () => {
-    if (confirm('Restore default sample watchlist (4:2 ratio)?')) {
+    if (confirm('Restore default watchlist with all 20 required stocks?')) {
       watchlist = resetWatchlist();
       expandedId = null;
       render();
@@ -338,12 +326,10 @@ function bindEvents(): void {
   const installBtn = document.getElementById('btn-install');
   if (installBtn) {
     if (isIOS && !isStandalone) {
-      // iOS Safari user not in standalone home-screen mode
       installBtn.style.display = 'inline-flex';
       installBtn.textContent = '📲 Add to Home Screen';
       installBtn.addEventListener('click', openIosModal);
     } else if (deferredPrompt) {
-      // Chrome/Android PWA prompt
       installBtn.style.display = 'inline-flex';
       installBtn.textContent = '📲 Install App';
       installBtn.addEventListener('click', async () => {
@@ -360,13 +346,12 @@ function bindEvents(): void {
   // Stock Row Click (Accordion Toggle)
   document.querySelectorAll('[data-toggle-id]').forEach((row) => {
     row.addEventListener('click', (e) => {
-      // If clicking inside drawer or buttons, do not toggle
+      // If clicking inside drawer or delete button, do not toggle
       if ((e.target as HTMLElement).closest('.stock-drawer')) return;
 
       const id = row.getAttribute('data-toggle-id');
       expandedId = expandedId === id ? null : id;
 
-      // Update expanded styling without tearing down inputs
       document.querySelectorAll('.stock-card').forEach((card) => {
         const cardId = card.getAttribute('data-stock-card');
         if (cardId === expandedId) {
@@ -375,82 +360,6 @@ function bindEvents(): void {
           card.classList.remove('expanded');
         }
       });
-    });
-  });
-
-  // Stepper: Increase weight
-  document.querySelectorAll('[data-inc]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const id = (btn as HTMLElement).getAttribute('data-inc')!;
-      const s = watchlist.find((x) => x.id === id);
-      if (s) {
-        s.weight++;
-        saveAndSync();
-        // Update input and badge directly
-        const input = document.querySelector(`input[data-weight="${id}"]`) as HTMLInputElement;
-        if (input) input.value = s.weight.toString();
-        const badge = document.querySelector(`[data-badge-for="${id}"]`);
-        if (badge) badge.textContent = `${s.weight}× wt`;
-        syncBreadthUI();
-      }
-    });
-  });
-
-  // Stepper: Decrease weight
-  document.querySelectorAll('[data-dec]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const id = (btn as HTMLElement).getAttribute('data-dec')!;
-      const s = watchlist.find((x) => x.id === id);
-      if (s && s.weight > 0) {
-        s.weight--;
-        saveAndSync();
-        // Update input and badge directly
-        const input = document.querySelector(`input[data-weight="${id}"]`) as HTMLInputElement;
-        if (input) input.value = s.weight.toString();
-        const badge = document.querySelector(`[data-badge-for="${id}"]`);
-        if (badge) badge.textContent = `${s.weight}× wt`;
-        syncBreadthUI();
-      }
-    });
-  });
-
-  // Numeric weight input
-  document.querySelectorAll('.weight-input').forEach((input) => {
-    input.addEventListener('click', (e) => e.stopPropagation());
-
-    input.addEventListener('input', (e) => {
-      e.stopPropagation();
-      const el = e.target as HTMLInputElement;
-      const id = el.getAttribute('data-weight')!;
-      const val = parseInt(el.value, 10);
-      const s = watchlist.find((x) => x.id === id);
-      if (s && !isNaN(val) && val >= 0) {
-        s.weight = val;
-        saveAndSync();
-        const badge = document.querySelector(`[data-badge-for="${id}"]`);
-        if (badge) badge.textContent = `${s.weight}× wt`;
-        syncBreadthUI();
-      }
-    });
-
-    input.addEventListener('change', (e) => {
-      e.stopPropagation();
-      const el = e.target as HTMLInputElement;
-      const id = el.getAttribute('data-weight')!;
-      const val = parseInt(el.value, 10);
-      const s = watchlist.find((x) => x.id === id);
-      if (s) {
-        s.weight = isNaN(val) || val < 0 ? 0 : val;
-        el.value = s.weight.toString();
-        saveAndSync();
-        const badge = document.querySelector(`[data-badge-for="${id}"]`);
-        if (badge) badge.textContent = `${s.weight}× wt`;
-        syncBreadthUI();
-      }
     });
   });
 
@@ -472,7 +381,7 @@ function openModal(): void {
   searchModal.classList.add('open');
   searchModal.setAttribute('aria-hidden', 'false');
   modalSearchInput.value = '';
-  modalSearchResults.innerHTML = `<div class="modal-hint">Type a ticker or company name to search across India &amp; US markets...</div>`;
+  modalSearchResults.innerHTML = `<div class="modal-hint">Type a ticker or company name (e.g. Tata Steel, Adani, Reliance)...</div>`;
   setTimeout(() => modalSearchInput.focus(), 60);
 }
 
@@ -486,7 +395,7 @@ function handleModalInput(): void {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
 
   if (q.length < 1) {
-    modalSearchResults.innerHTML = `<div class="modal-hint">Type a ticker or company name to search across India &amp; US markets...</div>`;
+    modalSearchResults.innerHTML = `<div class="modal-hint">Type a ticker or company name (e.g. Tata Steel, Adani, Reliance)...</div>`;
     return;
   }
 
@@ -520,9 +429,10 @@ function handleModalInput(): void {
       })
       .join('');
 
+    // Bind click to add stock
     modalSearchResults.querySelectorAll('.modal-result-row').forEach((row) => {
       row.addEventListener('click', () => {
-        addStock(row.getAttribute('data-sym')!, 1, {
+        addStock(row.getAttribute('data-sym')!, {
           symbol: row.getAttribute('data-sym')!,
           fullName: row.getAttribute('data-name')!,
           currentPrice: parseFloat(row.getAttribute('data-price')!),
@@ -534,7 +444,7 @@ function handleModalInput(): void {
         closeModal();
       });
     });
-  }, 220);
+  }, 200);
 }
 
 // Modal event listeners
@@ -581,13 +491,13 @@ if (iosInstallModal) {
 }
 
 // ===== Stock Addition Logic =====
-async function addStock(symbol: string, weight = 1, info?: Partial<StockInfo>): Promise<void> {
+async function addStock(symbol: string, info?: Partial<StockInfo>): Promise<void> {
   const sym = symbol.trim().toUpperCase();
   if (!sym) return;
 
   const existing = watchlist.find((s) => s.symbol.toUpperCase() === sym || s.id === sym);
   if (existing) {
-    existing.weight++;
+    expandedId = existing.id;
     saveAndSync();
     render();
     return;
@@ -601,7 +511,7 @@ async function addStock(symbol: string, weight = 1, info?: Partial<StockInfo>): 
       currentPrice: info.currentPrice,
       changePercent: info.changePercent || '0.00%',
       rawPercent: info.rawPercent || 0,
-      weight,
+      weight: 1,
       currency: info.currency || 'INR',
       exchange: info.exchange,
       lastUpdated: Date.now(),
@@ -616,14 +526,14 @@ async function addStock(symbol: string, weight = 1, info?: Partial<StockInfo>): 
       currentPrice: q?.currentPrice || 0,
       changePercent: q?.changePercent || '0.00%',
       rawPercent: q?.rawPercent || 0,
-      weight,
+      weight: 1,
       currency: q?.currency || 'INR',
       exchange: q?.exchange,
       lastUpdated: Date.now(),
     });
   }
 
-  expandedId = sym; // Auto-expand new stock so user can adjust weight immediately
+  expandedId = sym;
   saveAndSync();
   render();
 }
@@ -659,13 +569,15 @@ async function refreshAll(): Promise<void> {
     saveAndSync();
     render();
   } catch (err) {
-    console.error('[Refresh] Failed to update quotes:', err);
+    console.error('[Refresh] Failed to refresh quotes:', err);
   } finally {
-    setTimeout(() => document.getElementById('btn-refresh')?.classList.remove('spinning'), 450);
+    setTimeout(() => {
+      btn?.classList.remove('spinning');
+    }, 500);
   }
 }
 
-// ===== Live Elapsed Time Updater =====
+// Update Relative Time Badges
 function updateTimeBadges(): void {
   for (const s of watchlist) {
     const el = document.querySelector(`[data-time-id="${s.id}"]`);
@@ -716,4 +628,4 @@ setInterval(() => {
   if (document.visibilityState === 'visible' && watchlist.length > 0) {
     refreshAll();
   }
-}, 60000);
+}, 45000);
