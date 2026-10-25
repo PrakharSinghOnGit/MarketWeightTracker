@@ -110,8 +110,8 @@ function syncBreadthUI(): void {
   const pillEl = document.getElementById('breadth-sentiment-pill');
   const pctSumEl = document.getElementById('breadth-pct-sum');
 
-  if (greenValEl) greenValEl.textContent = stats.greenCount.toString();
-  if (redValEl) redValEl.textContent = stats.redCount.toString();
+  if (greenValEl) greenValEl.textContent = `${stats.greenPercentage}%`;
+  if (redValEl) redValEl.textContent = `${stats.redPercentage}%`;
   if (barGreenEl) barGreenEl.style.width = `${total > 0 ? greenBar : 50}%`;
   if (barRedEl) barRedEl.style.width = `${total > 0 ? redBar : 50}%`;
   if (pillEl) {
@@ -119,7 +119,7 @@ function syncBreadthUI(): void {
     pillEl.className = `breadth-sentiment-pill ${sentimentClass}`;
   }
   if (pctSumEl) {
-    pctSumEl.innerHTML = `<span class="pct-green-txt">${stats.greenPercentage}%</span> vs <span class="pct-red-txt">${stats.redPercentage}%</span>`;
+    pctSumEl.innerHTML = `<span class="pct-green-txt">${stats.greenCount} Up</span> vs <span class="pct-red-txt">${stats.redCount} Down</span>`;
   }
 }
 
@@ -254,16 +254,16 @@ function render(): void {
               <span class="breadth-sentiment-pill ${sentimentClass}" id="breadth-sentiment-pill">${sentimentText}</span>
             </div>
             <div class="breadth-ratio-row">
-              <span class="ratio-val green" id="green-ratio-val">${stats.greenCount}</span>
+              <span class="ratio-val green" id="green-ratio-val">${stats.greenPercentage}%</span>
               <span class="ratio-label-sm">Up</span>
               <span class="ratio-divider">:</span>
-              <span class="ratio-val red" id="red-ratio-val">${stats.redCount}</span>
+              <span class="ratio-val red" id="red-ratio-val">${stats.redPercentage}%</span>
               <span class="ratio-label-sm">Down</span>
             </div>
           </div>
           <div class="breadth-right">
             <div class="breadth-pct-summary" id="breadth-pct-sum">
-              <span class="pct-green-txt">${stats.greenPercentage}%</span> vs <span class="pct-red-txt">${stats.redPercentage}%</span>
+              <span class="pct-green-txt">${stats.greenCount} Up</span> vs <span class="pct-red-txt">${stats.redCount} Down</span>
             </div>
           </div>
         </div>
